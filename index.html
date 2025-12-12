@@ -9,10 +9,6 @@
       --bg0:#07131d;
       --bg1:#0a1e2d;
       --text:rgba(255,255,255,.88);
-      --muted:rgba(255,255,255,.62);
-      --line:rgba(255,255,255,.12);
-      --shadow: 0 18px 50px rgba(0,0,0,.45);
-      --radius:18px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -20,462 +16,279 @@
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--text);
-      background: radial-gradient(1200px 700px at 15% 10%, rgba(102,205,255,.14), transparent 55%),
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(102,205,255,.12), transparent 55%),
                   radial-gradient(900px 600px at 85% 20%, rgba(60,170,255,.10), transparent 60%),
                   linear-gradient(180deg, var(--bg0), var(--bg1));
       overflow:hidden;
     }
-    .wrap{position:fixed; inset:0}
-    canvas{position:absolute; inset:0; width:100%; height:100%}
-
-    .hud{
-      position:absolute;
-      left:22px; top:22px;
-      width:min(380px, calc(100vw - 44px));
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
-      border:1px solid var(--line);
-      border-radius: var(--radius);
-      padding:16px 16px 14px;
-      box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-    }
-    .title{
-      display:flex; align-items:baseline; justify-content:space-between;
-      gap:12px;
-      padding-bottom:10px;
-      border-bottom:1px solid var(--line);
-      margin-bottom:12px;
-    }
-    .title h1{font-size:16px; font-weight:650; letter-spacing:.2px; margin:0}
-    .title .sub{font-size:12px; color:var(--muted)}
-    .row{display:grid; grid-template-columns: 1fr; gap:10px; margin:10px 0}
-    .control{display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center}
-    label{font-size:12px; color:var(--muted)}
-    output{font-variant-numeric: tabular-nums; font-size:12px; color:rgba(255,255,255,.8)}
-    input[type="range"]{
-      width:100%;
-      appearance:none;
-      height:10px;
-      border-radius:999px;
-      background: linear-gradient(90deg, rgba(138,214,255,.55), rgba(255,255,255,.14));
-      outline:none;
-      border:1px solid rgba(255,255,255,.10);
-    }
-    input[type="range"]::-webkit-slider-thumb{
-      appearance:none;
-      width:18px; height:18px;
-      border-radius:50%;
-      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(138,214,255,.75));
-      border:1px solid rgba(255,255,255,.28);
-      box-shadow: 0 10px 18px rgba(0,0,0,.35);
-    }
-    .note{font-size:12px; color:rgba(255,255,255,.55); margin-top:6px; line-height:1.35}
-    .pill{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
-      margin-top:10px;
-      user-select:none;
-    }
-    .dot{
-      width:8px; height:8px; border-radius:50%;
-      background: rgba(138,214,255,.9);
-      box-shadow: 0 0 0 3px rgba(138,214,255,.16);
-    }
-    .corner{
-      position:absolute; right:22px; bottom:22px;
+    canvas{position:fixed; inset:0; width:100%; height:100%}
+    .label{
+      position:fixed;
+      left:18px;
+      top:16px;
       padding:10px 12px;
-      border-radius: var(--radius);
+      border-radius:14px;
       border:1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
       backdrop-filter: blur(8px);
       -webkit-backdrop-filter: blur(8px);
-      box-shadow: var(--shadow);
-      color: rgba(255,255,255,.60);
-      font-size:12px;
-      max-width:min(520px, calc(100vw - 44px));
-      line-height:1.35;
+      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      font-size:13px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.72);
+      user-select:none;
     }
-    .kbd{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:11px; color:rgba(255,255,255,.75);
-      border:1px solid rgba(255,255,255,.14);
-      padding:2px 6px;
-      border-radius:8px;
-      background: rgba(255,255,255,.06);
-    }
+    .label b{color:rgba(255,255,255,.92); font-weight:650}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <canvas id="c"></canvas>
-
-    <div class="hud" role="group" aria-label="Wave controls">
-      <div class="title">
-        <h1>Ocean Wave Simulation</h1>
-        <div class="sub">faster render (offscreen scaling)</div>
-      </div>
-
-      <div class="row">
-        <div class="control">
-          <label for="wind">Wind speed</label>
-          <output id="windOut"></output>
-        </div>
-        <input id="wind" type="range" min="0" max="100" step="1" value="45" />
-
-        <div class="control">
-          <label for="height">Wave height</label>
-          <output id="heightOut"></output>
-        </div>
-        <input id="height" type="range" min="0" max="100" step="1" value="55" />
-
-        <div class="control">
-          <label for="light">Lighting</label>
-          <output id="lightOut"></output>
-        </div>
-        <input id="light" type="range" min="0" max="100" step="1" value="62" />
-
-        <div class="pill" aria-hidden="true"><span class="dot"></span><span>Press <span class="kbd">Space</span> pause. <span class="kbd">R</span> reset.</span></div>
-        <div class="note">Performance: renders on a smaller offscreen canvas and scales up.</div>
-      </div>
-    </div>
-
-    <div class="corner" aria-hidden="true">
-      If still slow: set <span class="kbd">SCALE</span> to 0.55 inside the script.
-    </div>
-  </div>
+  <canvas id="c"></canvas>
+  <div class="label"><b>Ocean Wave Simulation</b> — top-down</div>
 
   <script>
+    // Top-down ocean surface.
+    // Performance strategy:
+    // - Render into a small simulation buffer (ImageData) each frame.
+    // - Two passes: (1) compute height field into a Float32Array, (2) shade from finite-difference normals.
+    // - One putImageData + upscale (no per-cell fillRect).
+
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
-    // Offscreen render target (major speed-up)
+    // Fixed “middle” settings (no UI)
+    const params = {
+      wind: 0.5,
+      height: 0.5,
+      light: 0.5,
+      paused: false
+    };
+
+    // Quality knob: lower = faster.
+    const SIM_MAX = 360; // max sim dimension (pixels)
+
     const sim = document.createElement('canvas');
-    const sctx = sim.getContext('2d', { alpha: false, desynchronized: true });
+    const sctx = sim.getContext('2d', { alpha: false, desynchronized: true, willReadFrequently: true });
 
-    // Quality knob: lower = faster
-    const SCALE = 0.65;
-
-    const windEl = document.getElementById('wind');
-    const heightEl = document.getElementById('height');
-    const lightEl = document.getElementById('light');
-    const windOut = document.getElementById('windOut');
-    const heightOut = document.getElementById('heightOut');
-    const lightOut = document.getElementById('lightOut');
-
-    let W = 0, H = 0;
+    let W=0,H=0,SW=0,SH=0;
+    let img=null, pix=null, heights=null;
 
     function resize(){
-      // Force dpr=1 for predictable performance
       W = window.innerWidth;
       H = window.innerHeight;
-
       canvas.width = W;
       canvas.height = H;
 
-      sim.width = Math.max(320, Math.floor(W * SCALE));
-      sim.height = Math.max(240, Math.floor(H * SCALE));
+      // Choose a small sim resolution, keeping aspect.
+      const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
+      if(W >= H){
+        SH = maxDim;
+        SW = Math.floor(maxDim * (W/H));
+      } else {
+        SW = maxDim;
+        SH = Math.floor(maxDim * (H/W));
+      }
+      // Hard caps for ultrawide screens.
+      SW = Math.min(SIM_MAX*2, Math.max(240, SW));
+      SH = Math.min(SIM_MAX*2, Math.max(240, SH));
+
+      sim.width = SW;
+      sim.height = SH;
+      img = sctx.createImageData(SW, SH);
+      pix = img.data;
+      heights = new Float32Array(SW * SH);
     }
+
     window.addEventListener('resize', resize);
     resize();
 
-    class Simplex2D{
-      constructor(seed=1){
-        this.perm = new Uint8Array(512);
-        const p = new Uint8Array(256);
-        for(let i=0;i<256;i++) p[i]=i;
-        let s = seed >>> 0;
-        const rand = () => (s = (s*1664525 + 1013904223)>>>0) / 4294967296;
-        for(let i=255;i>0;i--){
-          const j = Math.floor(rand()*(i+1));
-          const t = p[i]; p[i]=p[j]; p[j]=t;
-        }
-        for(let i=0;i<512;i++) this.perm[i]=p[i&255];
-        this.grad3 = new Float32Array([
-          1,1,  -1,1,  1,-1,  -1,-1,
-          1,0,  -1,0,  1,0,   -1,0,
-          0,1,  0,-1,  0,1,   0,-1
-        ]);
-      }
-      noise(xin,yin){
-        const F2 = 0.5*(Math.sqrt(3)-1);
-        const G2 = (3-Math.sqrt(3))/6;
-        const s = (xin+yin)*F2;
-        const i = Math.floor(xin+s);
-        const j = Math.floor(yin+s);
-        const t = (i+j)*G2;
-        const X0 = i - t;
-        const Y0 = j - t;
-        const x0 = xin - X0;
-        const y0 = yin - Y0;
-
-        let i1, j1;
-        if(x0>y0){ i1=1; j1=0; } else { i1=0; j1=1; }
-
-        const x1 = x0 - i1 + G2;
-        const y1 = y0 - j1 + G2;
-        const x2 = x0 - 1 + 2*G2;
-        const y2 = y0 - 1 + 2*G2;
-
-        const ii = i & 255;
-        const jj = j & 255;
-        const gi0 = (this.perm[ii + this.perm[jj]] % 12) * 2;
-        const gi1 = (this.perm[ii + i1 + this.perm[jj + j1]] % 12) * 2;
-        const gi2 = (this.perm[ii + 1 + this.perm[jj + 1]] % 12) * 2;
-
-        let n0=0, n1=0, n2=0;
-        let t0 = 0.5 - x0*x0 - y0*y0;
-        if(t0>=0){
-          t0 *= t0;
-          n0 = t0 * t0 * (this.grad3[gi0]*x0 + this.grad3[gi0+1]*y0);
-        }
-        let t1 = 0.5 - x1*x1 - y1*y1;
-        if(t1>=0){
-          t1 *= t1;
-          n1 = t1 * t1 * (this.grad3[gi1]*x1 + this.grad3[gi1+1]*y1);
-        }
-        let t2 = 0.5 - x2*x2 - y2*y2;
-        if(t2>=0){
-          t2 *= t2;
-          n2 = t2 * t2 * (this.grad3[gi2]*x2 + this.grad3[gi2+1]*y2);
-        }
-        return 70 * (n0 + n1 + n2);
-      }
-    }
-    const noise = new Simplex2D(1337);
-
-    const state = { wind: 0.45, height: 0.55, light: 0.62, paused: false };
-
-    function syncUI(){
-      state.wind = +windEl.value / 100;
-      state.height = +heightEl.value / 100;
-      state.light = +lightEl.value / 100;
-
-      windOut.textContent = `${Math.round(state.wind*100)}%`;
-      heightOut.textContent = `${Math.round(state.height*100)}%`;
-      lightOut.textContent = `${Math.round(state.light*100)}%`;
-    }
-    windEl.addEventListener('input', syncUI);
-    heightEl.addEventListener('input', syncUI);
-    lightEl.addEventListener('input', syncUI);
-    syncUI();
-
-    function reset(){
-      windEl.value = 45;
-      heightEl.value = 55;
-      lightEl.value = 62;
-      syncUI();
+    // Cheap hash noise (fast)
+    function hash2(x, y){
+      let n = (x * 374761393 + y * 668265263) | 0;
+      n = (n ^ (n >>> 13)) | 0;
+      n = (n * 1274126177) | 0;
+      return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
     }
 
-    window.addEventListener('keydown', (e)=>{
-      if(e.code === 'Space'){ state.paused = !state.paused; e.preventDefault(); }
-      if(e.key === 'r' || e.key === 'R') reset();
-    });
+    function valueNoise(x, y){
+      const xi = Math.floor(x), yi = Math.floor(y);
+      const xf = x - xi, yf = y - yi;
+      const u = xf * xf * (3 - 2*xf);
+      const v = yf * yf * (3 - 2*yf);
 
-    function clamp01(v){ return v<0?0:(v>1?1:v); }
-    function lerp(a,b,t){ return a + (b-a)*t; }
-    function mix3(a,b,t){ return [lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t)]; }
-    function rgb(r,g,b){
-      r = Math.round(clamp01(r)*255);
-      g = Math.round(clamp01(g)*255);
-      b = Math.round(clamp01(b)*255);
-      return `rgb(${r},${g},${b})`;
+      const a = hash2(xi, yi);
+      const b = hash2(xi+1, yi);
+      const c = hash2(xi, yi+1);
+      const d = hash2(xi+1, yi+1);
+
+      const ab = a + (b-a)*u;
+      const cd = c + (d-c)*u;
+      return (ab + (cd-ab)*v) * 2 - 1; // [-1,1]
     }
 
+    // Height field: 3 directional waves + 1 ripple noise layer
     function waveHeight(x, y, t, p){
       const wind = p.wind;
-      const amp = 0.35 + 1.25 * p.height;
-      const speed = 0.35 + 1.65 * wind;
+      const amp = 0.35 + 1.15 * p.height;
+      const speed = 0.45 + 1.35 * wind;
 
-      const theta0 = -0.55 + wind * 0.95;
+      const theta = -0.55 + wind * 0.95;
+      const dx0 = Math.cos(theta), dy0 = Math.sin(theta);
 
       let h = 0;
-      const comps = [
-        {f:0.45, a:1.00, th: theta0},
-        {f:0.75, a:0.55, th: theta0 + 0.55},
-        {f:1.15, a:0.35, th: theta0 - 0.85},
-        {f:1.85, a:0.22, th: theta0 + 1.25},
-        {f:2.60, a:0.14, th: theta0 - 1.55},
-      ];
 
-      for(const c of comps){
-        const dx = Math.cos(c.th), dy = Math.sin(c.th);
-        const k = c.f * (1.25 + 0.9*wind);
-        const w = (0.9 + 1.6*wind) * c.f;
-        const ph = (x*dx + y*dy) * k + t * w * speed;
-        const s = Math.sin(ph);
-        h += (s + 0.35*s*s*s) * c.a;
-      }
+      // Fewer components for speed
+      const c0f=0.70, c0a=1.00;
+      const c1f=1.20, c1a=0.45;
+      const c2f=1.90, c2a=0.25;
 
-      // One noise layer only (faster)
-      const n = noise.noise(x*0.55 + t*0.18*speed, y*0.55 - t*0.16*speed);
-      h += (0.55 + 1.2*wind) * 0.55 * n;
+      // Component 0
+      let ph = (x*dx0 + y*dy0) * c0f + t * (0.95*c0f) * speed;
+      let s = Math.sin(ph);
+      h += (s + 0.28*s*s*s) * c0a;
 
-      const distAtten = 0.86 + 0.14*Math.cos((x*Math.cos(theta0) + y*Math.sin(theta0))*0.08);
-      return (h * 0.22) * amp * distAtten;
+      // Component 1
+      const th1 = theta + 0.85;
+      ph = (x*Math.cos(th1) + y*Math.sin(th1)) * c1f + t * (1.05*c1f) * speed;
+      s = Math.sin(ph);
+      h += (s + 0.22*s*s*s) * c1a;
+
+      // Component 2
+      const th2 = theta - 1.10;
+      ph = (x*Math.cos(th2) + y*Math.sin(th2)) * c2f + t * (1.15*c2f) * speed;
+      s = Math.sin(ph);
+      h += (s + 0.18*s*s*s) * c2a;
+
+      // Ripples: advected value noise
+      const nx = x*0.55 + t*0.55*speed;
+      const ny = y*0.55 - t*0.48*speed;
+      h += (0.18 + 0.30*wind) * valueNoise(nx, ny);
+
+      return (h * 0.22) * amp;
     }
 
-    function normalAt(x, y, t, p){
-      // Larger epsilon lowers high-frequency cost and stabilizes shading
-      const e = 0.03;
-      const h  = waveHeight(x, y, t, p);
-      const hx = waveHeight(x+e, y, t, p);
-      const hy = waveHeight(x, y+e, t, p);
-      let nx = -(hx - h)/e;
-      let ny = -(hy - h)/e;
-      let nz = 1;
-      const inv = 1/Math.hypot(nx, ny, nz);
-      return [nx*inv, ny*inv, nz*inv];
+    function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+
+    const deep = [0.02, 0.15, 0.23];
+    const mid  = [0.03, 0.22, 0.30];
+    const crest= [0.10, 0.42, 0.48];
+
+    function lightDir(p){
+      const a = lerp(-0.35, 0.55, p.light);
+      const elev = lerp(0.50, 0.75, p.light);
+      const lx = Math.cos(a), ly = Math.sin(a), lz = elev;
+      const inv = 1/Math.hypot(lx,ly,lz);
+      return [lx*inv, ly*inv, lz*inv];
     }
 
     let t0 = performance.now();
     let simT = 0;
 
-    function render(now){
+    function frame(now){
       const dt = Math.min(0.033, (now - t0) / 1000);
       t0 = now;
-      if(!state.paused) simT += dt;
+      if(!params.paused) simT += dt;
 
-      const SW = sim.width, SH = sim.height;
+      const L = lightDir(params);
+      const V = [0, 0, 1];
 
-      // Sky
-      const gSky = sctx.createLinearGradient(0,0,0,SH);
-      gSky.addColorStop(0, 'rgb(8, 22, 34)');
-      gSky.addColorStop(0.55, 'rgb(6, 18, 28)');
-      gSky.addColorStop(1, 'rgb(6, 16, 26)');
-      sctx.fillStyle = gSky;
-      sctx.fillRect(0,0,SW,SH);
+      // World scale: larger = broader waves
+      const worldScale = lerp(2.2, 1.6, params.wind);
 
-      // Glow
-      const light = state.light;
-      const sunX = lerp(0.18, 0.78, light);
-      const sunY = lerp(0.18, 0.08, light);
-      const gx = SW*sunX, gy = SH*sunY;
-
-      const glow = sctx.createRadialGradient(gx, gy, 0, gx, gy, Math.min(SW,SH)*0.55);
-      glow.addColorStop(0, 'rgba(180,235,255,0.16)');
-      glow.addColorStop(0.25, 'rgba(120,205,255,0.10)');
-      glow.addColorStop(1, 'rgba(0,0,0,0)');
-      sctx.fillStyle = glow;
-      sctx.fillRect(0,0,SW,SH);
-
-      // Horizon
-      const horizon = Math.floor(SH * 0.38);
-      sctx.fillStyle = 'rgba(255,255,255,0.06)';
-      sctx.fillRect(0, horizon-1, SW, 1);
-
-      const oceanTop = horizon;
-      const oceanBottom = SH;
-
-      // Light vector
-      const sunAngle = lerp(-0.45, 0.65, light);
-      const lx = Math.cos(sunAngle);
-      const ly = Math.sin(sunAngle);
-      const lz = lerp(0.35, 0.70, light);
-      const Linv = 1/Math.hypot(lx, ly, lz);
-      const L = [lx*Linv, ly*Linv, lz*Linv];
-
-      const V = [0, -0.15, 0.99];
-      const Vinv = 1/Math.hypot(V[0],V[1],V[2]);
-      V[0]*=Vinv; V[1]*=Vinv; V[2]*=Vinv;
-
-      const deep = [0.02, 0.16, 0.24];
-      const mid  = [0.03, 0.22, 0.30];
-      const crest= [0.10, 0.42, 0.48];
-
-      // Reduced sampling (fewer lines and columns)
-      const lines = Math.max(160, Math.floor((oceanBottom - oceanTop) / 3.0));
-      for(let i=0;i<lines;i++){
-        const y = oceanTop + (i/(lines-1))*(oceanBottom-oceanTop);
-        const depth = (y - oceanTop) / (oceanBottom - oceanTop);
-
-        const z = lerp(3.8, 0.35, Math.pow(depth, 0.72));
-        const worldY = simT*0.25 + z*2.0;
-
-        const span = lerp(5.2, 1.35, Math.pow(depth, 0.55));
-        const base = mix3(deep, mid, clamp01(0.15 + 0.85*depth));
-        const haze = Math.pow(1-depth, 2.2);
-
-        const xSamples = Math.max(160, Math.floor(SW/6.0));
-        const dx = SW / xSamples;
-
-        for(let s=0;s<xSamples;s++){
-          const x = s*dx;
-          const u = (x/SW - 0.5);
-          const worldX = u * span;
-
-          const h = waveHeight(worldX, worldY, simT, state);
-          const n = normalAt(worldX, worldY, simT, state);
-
-          const ndotl = clamp01(n[0]*L[0] + n[1]*L[1] + n[2]*L[2]);
-          const diffuse = 0.10 + 0.75 * ndotl;
-
-          const ndotv = clamp01(n[0]*V[0] + n[1]*V[1] + n[2]*V[2]);
-          const fresnel = Math.pow(1-ndotv, 3.0);
-
-          const hx = L[0]+V[0], hy=L[1]+V[1], hz=L[2]+V[2];
-          const hinv = 1/Math.hypot(hx,hy,hz);
-          const Hh = [hx*hinv, hy*hinv, hz*hinv];
-          const ndoth = clamp01(n[0]*Hh[0] + n[1]*Hh[1] + n[2]*Hh[2]);
-          const shininess = lerp(30, 80, state.light);
-          const spec = Math.pow(ndoth, shininess) * lerp(0.15, 0.55, state.light);
-
-          const slope = clamp01((1-n[2]) * 2.4);
-          const whiten = clamp01(0.10*slope + 0.16*Math.max(0,h));
-
-          let col = mix3(base, crest, whiten);
-          col = [col[0]*diffuse, col[1]*diffuse, col[2]*diffuse];
-
-          const fresTint = [0.16, 0.32, 0.38];
-          col[0] = lerp(col[0], fresTint[0], fresnel*0.55);
-          col[1] = lerp(col[1], fresTint[1], fresnel*0.55);
-          col[2] = lerp(col[2], fresTint[2], fresnel*0.55);
-
-          col[0] += spec; col[1] += spec; col[2] += spec;
-
-          col[0] = lerp(col[0], 0.02, haze*0.55);
-          col[1] = lerp(col[1], 0.08, haze*0.55);
-          col[2] = lerp(col[2], 0.12, haze*0.55);
-
-          sctx.fillStyle = rgb(col[0], col[1], col[2]);
-          sctx.fillRect(x, y, dx+1, (oceanBottom-oceanTop)/lines + 1);
+      // PASS 1: heights
+      let idx = 0;
+      for(let y=0; y<SH; y++){
+        const vy = (y/SH - 0.5) * worldScale * (SH/SW);
+        for(let x=0; x<SW; x++, idx++){
+          const vx = (x/SW - 0.5) * worldScale;
+          heights[idx] = waveHeight(vx, vy, simT, params);
         }
-
-        const nline = noise.noise(i*0.12, simT*0.6);
-        const a = (0.010 + 0.010*state.wind) * (0.45 + 0.55*depth) * (0.5 + 0.5*nline);
-        sctx.fillStyle = `rgba(0,0,0,${a})`;
-        sctx.fillRect(0, y, SW, (oceanBottom-oceanTop)/lines + 1);
       }
 
-      // Reflection streak
-      const streakY = horizon + (SH-horizon)*0.62;
-      const streak = sctx.createRadialGradient(SW*sunX, streakY, 0, SW*sunX, streakY, SW*0.55);
-      streak.addColorStop(0, `rgba(210,245,255,${0.10 + 0.10*state.light})`);
-      streak.addColorStop(0.18, `rgba(160,230,255,${0.06 + 0.06*state.light})`);
-      streak.addColorStop(1, 'rgba(0,0,0,0)');
-      sctx.fillStyle = streak;
-      sctx.fillRect(0, horizon, SW, SH-horizon);
+      // PASS 2: shading from height buffer
+      const invDx = SW / worldScale;
+      const invDy = SH / (worldScale * (SH/SW));
+      const epsx = 1 / invDx;
+      const epsy = 1 / invDy;
 
-      // Vignette
-      const vig = sctx.createRadialGradient(SW*0.5, SH*0.55, Math.min(SW,SH)*0.1, SW*0.5, SH*0.55, Math.min(SW,SH)*0.75);
-      vig.addColorStop(0, 'rgba(0,0,0,0)');
-      vig.addColorStop(1, 'rgba(0,0,0,0.55)');
-      sctx.fillStyle = vig;
-      sctx.fillRect(0,0,SW,SH);
+      let p = 0;
+      for(let y=0; y<SH; y++){
+        const y0 = y === 0 ? 0 : y-1;
+        const y1 = y === SH-1 ? SH-1 : y+1;
+        for(let x=0; x<SW; x++){
+          const x0 = x === 0 ? 0 : x-1;
+          const x1 = x === SW-1 ? SW-1 : x+1;
 
-      // Scale to screen
+          const i  = y*SW + x;
+          const hx = (heights[y*SW + x1] - heights[y*SW + x0]) / (2*epsx);
+          const hy = (heights[y1*SW + x] - heights[y0*SW + x]) / (2*epsy);
+
+          let nx = -hx, ny = -hy, nz = 1;
+          const nInv = 1/Math.hypot(nx, ny, nz);
+          nx *= nInv; ny *= nInv; nz *= nInv;
+
+          const ndotl = clamp01(nx*L[0] + ny*L[1] + nz*L[2]);
+          const diffuse = 0.18 + 0.72 * ndotl;
+
+          const ndotv = clamp01(nz);
+          const fresnel = Math.pow(1 - ndotv, 2.2);
+
+          const hxv = L[0] + V[0], hyv = L[1] + V[1], hzv = L[2] + V[2];
+          const hInv = 1/Math.hypot(hxv, hyv, hzv);
+          const Hx = hxv*hInv, Hy = hyv*hInv, Hz = hzv*hInv;
+          const ndoth = clamp01(nx*Hx + ny*Hy + nz*Hz);
+          const shininess = lerp(55, 95, params.light);
+          const spec = Math.pow(ndoth, shininess) * lerp(0.18, 0.55, params.light);
+
+          const slope = clamp01((1 - nz) * 2.2);
+          const foam = clamp01(0.10 + 0.55*slope);
+
+          const h = heights[i];
+          const hMix = clamp01(0.5 + h*3.0);
+          let r = lerp(deep[0], mid[0], hMix);
+          let g = lerp(deep[1], mid[1], hMix);
+          let b = lerp(deep[2], mid[2], hMix);
+
+          r *= diffuse; g *= diffuse; b *= diffuse;
+
+          r = lerp(r, 0.10, fresnel*0.35);
+          g = lerp(g, 0.22, fresnel*0.35);
+          b = lerp(b, 0.30, fresnel*0.35);
+
+          r = lerp(r, crest[0], foam*0.35);
+          g = lerp(g, crest[1], foam*0.35);
+          b = lerp(b, crest[2], foam*0.35);
+
+          r += spec; g += spec; b += spec;
+
+          const ux = (x/SW - 0.5);
+          const uy = (y/SH - 0.5);
+          const vv = clamp01(1 - (ux*ux + uy*uy)*1.1);
+          r *= (0.72 + 0.28*vv);
+          g *= (0.72 + 0.28*vv);
+          b *= (0.72 + 0.28*vv);
+
+          pix[p++] = r<=0 ? 0 : (r>=1 ? 255 : (r*255)|0);
+          pix[p++] = g<=0 ? 0 : (g>=1 ? 255 : (g*255)|0);
+          pix[p++] = b<=0 ? 0 : (b>=1 ? 255 : (b*255)|0);
+          pix[p++] = 255;
+        }
+      }
+
+      sctx.putImageData(img, 0, 0);
+
       ctx.imageSmoothingEnabled = true;
       ctx.setTransform(1,0,0,1,0,0);
       ctx.drawImage(sim, 0, 0, W, H);
 
-      requestAnimationFrame(render);
+      requestAnimationFrame(frame);
     }
 
-    requestAnimationFrame(render);
+    requestAnimationFrame(frame);
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.code === 'Space'){ params.paused = !params.paused; e.preventDefault(); }
+    });
   </script>
 </body>
 </html>
