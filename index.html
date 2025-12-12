@@ -3,12 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Ocean Wave Simulation</title>
+  <title>Luke E. Holman — Marine Researcher</title>
   <style>
     :root{
-      --bg0:#07131d;
-      --bg1:#0a1e2d;
-      --text:rgba(255,255,255,.88);
+      --bg0:#041018;
+      --bg1:#071b24;
+      --text:rgba(255,255,255,.86);
+      --muted:rgba(255,255,255,.66);
+      --line:rgba(255,255,255,.10);
+      --glass:rgba(0,0,0,.16);
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius:14px;
     }
     *{box-sizing:border-box}
     html,body{height:100%}
@@ -16,55 +21,241 @@
       margin:0;
       font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
       color:var(--text);
-      background: radial-gradient(1200px 700px at 15% 10%, rgba(102,205,255,.12), transparent 55%),
-                  radial-gradient(900px 600px at 85% 20%, rgba(60,170,255,.10), transparent 60%),
-                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      background:
+        radial-gradient(1200px 700px at 18% 12%, rgba(120,220,255,.10), transparent 58%),
+        radial-gradient(900px 650px at 82% 18%, rgba(70,190,255,.08), transparent 62%),
+        radial-gradient(900px 900px at 55% 85%, rgba(20,130,160,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
       overflow:hidden;
     }
     canvas{position:fixed; inset:0; width:100%; height:100%}
-    .label{
+
+    .shell{
       position:fixed;
       left:18px;
       top:16px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(0,0,0,.18);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      box-shadow: 0 18px 50px rgba(0,0,0,.45);
+      width:min(720px, calc(100vw - 36px));
+      z-index:10;
+      pointer-events:none; /* only children re-enable */
+    }
+
+    .label{
+      pointer-events:auto;
+      padding:12px 14px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
       font-size:13px;
       letter-spacing:.2px;
       color: rgba(255,255,255,.72);
       user-select:none;
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap:12px;
     }
-    .label b{color:rgba(255,255,255,.92); font-weight:650}
+    .label b{color:rgba(255,255,255,.92); font-weight:680}
+    .label .role{color:rgba(255,255,255,.70)}
+    .label .hint{color:rgba(255,255,255,.55); font-size:12px}
+
+    .nav{
+      pointer-events:auto;
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: rgba(255,255,255,.78);
+      padding:10px 12px;
+      border-radius:999px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor:pointer;
+      user-select:none;
+      font-size:13px;
+      letter-spacing:.2px;
+    }
+    .pill[aria-selected="true"]{
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .panel{
+      pointer-events:auto;
+      margin-top:12px;
+      padding:14px 14px;
+      border-radius: calc(var(--radius) + 2px);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      max-height: min(68vh, 720px);
+      overflow:auto;
+    }
+
+    .section{display:none}
+    .section[data-active="true"]{display:block}
+
+    h2{
+      margin:0 0 10px 0;
+      font-size:14px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.90);
+      font-weight:700;
+    }
+    h3{
+      margin:14px 0 6px 0;
+      font-size:13px;
+      color: rgba(255,255,255,.86);
+      font-weight:680;
+    }
+    p{
+      margin:0 0 10px 0;
+      font-size:13px;
+      line-height:1.55;
+      color: rgba(255,255,255,.72);
+    }
+    .meta{
+      font-size:12px;
+      color: rgba(255,255,255,.56);
+      margin-top:2px;
+    }
+    .linklist{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    a{
+      color: rgba(140,220,255,.92);
+      text-decoration:none;
+      border-bottom:1px solid rgba(140,220,255,.30);
+    }
+    a:hover{border-bottom-color: rgba(140,220,255,.65)}
+    .card{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.04);
+      border-radius:12px;
+      padding:12px;
+      margin:10px 0 0 0;
+    }
+
+    /* small screens: keep readable */
+    @media (max-width: 520px){
+      .label{flex-direction:column; align-items:flex-start}
+      .label .hint{display:none}
+    }
   </style>
 </head>
 <body>
   <canvas id="c"></canvas>
-  <div class="label"><b>Ocean Wave Simulation</b> — top-down</div>
+
+  <div class="shell">
+    <div class="label">
+      <div>
+        <b>Luke E. Holman</b> <span class="role">— Marine Researcher</span>
+        <div class="meta">Population genomics • eDNA/metabarcoding • Coastal ecosystems</div>
+      </div>
+      <div class="hint">Press Space to pause background</div>
+    </div>
+
+    <div class="nav" role="tablist" aria-label="Site sections">
+      <button class="pill" role="tab" aria-selected="true" data-tab="research">Research</button>
+      <button class="pill" role="tab" aria-selected="false" data-tab="about">About me</button>
+      <button class="pill" role="tab" aria-selected="false" data-tab="links">Links</button>
+    </div>
+
+    <div class="panel" role="region" aria-label="Content">
+      <div class="section" data-section="research" data-active="true">
+        <h2>Research</h2>
+
+        <div class="card">
+          <h3>Environmental DNA for biodiversity monitoring</h3>
+          <p>
+            Filler text: developing sampling and analysis pipelines that turn water samples into robust, interpretable biodiversity signals.
+            Focus on method calibration, contamination control, and translating molecular detections into ecological inference.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Population structure and connectivity in coastal systems</h3>
+          <p>
+            Filler text: integrating genetic markers with oceanography and habitat structure to infer dispersal, barriers to gene flow, and
+            effective population size across spatial scales relevant to management.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Community change under environmental stressors</h3>
+          <p>
+            Filler text: linking multi-trophic community composition to temperature, hypoxia, and anthropogenic pressure. Emphasis on
+            reproducible workflows, uncertainty quantification, and communication to non-specialists.
+          </p>
+        </div>
+      </div>
+
+      <div class="section" data-section="about" data-active="false">
+        <h2>About me</h2>
+        <p>
+          Filler text: I’m a marine researcher working at the interface of molecular ecology and coastal ecosystem science. My work
+          combines field sampling, DNA-based methods, and quantitative analysis to understand biodiversity patterns and ecological change.
+        </p>
+        <p>
+          Filler text: I aim to produce research that is methodologically rigorous, clearly communicated, and directly usable for monitoring
+          and conservation decisions.
+        </p>
+        <div class="card">
+          <h3>Short outline</h3>
+          <p>• Research themes: eDNA/metabarcoding, population genomics, community ecology</p>
+          <p>• Methods: PCR, library prep, bioinformatics, statistical modelling, reproducible pipelines</p>
+          <p>• Outputs: peer-reviewed publications, open code, collaborative monitoring tools</p>
+        </div>
+      </div>
+
+      <div class="section" data-section="links" data-active="false">
+        <h2>Links</h2>
+        <p>Replace the placeholder URLs with your real profiles.</p>
+        <div class="linklist">
+          <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a>
+          <a href="https://bsky.app/" target="_blank" rel="noopener">Bluesky</a>
+          <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+        <div class="card">
+          <h3>Contact</h3>
+          <p>Filler text: luke.holman@university.example</p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    // Top-down ocean surface.
-    // Performance strategy:
-    // - Render into a small simulation buffer (ImageData) each frame.
-    // - Two passes: (1) compute height field into a Float32Array, (2) shade from finite-difference normals.
-    // - One putImageData + upscale (no per-cell fillRect).
+    // Tabs (simple, no framework)
+    const pills = Array.from(document.querySelectorAll('.pill'));
+    const sections = Array.from(document.querySelectorAll('.section'));
 
+    function setTab(name){
+      for(const b of pills) b.setAttribute('aria-selected', String(b.dataset.tab === name));
+      for(const s of sections) s.dataset.active = String(s.dataset.section === name);
+    }
+    for(const b of pills){
+      b.addEventListener('click', () => setTab(b.dataset.tab));
+    }
+
+    // Background animation (same ongoing animation)
     const canvas = document.getElementById('c');
     const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
-    // Fixed “middle” settings (no UI)
-    const params = {
-      wind: 0.5,
-      height: 0.5,
-      light: 0.5,
-      paused: false
-    };
-
-    // Quality knob: lower = faster.
-    const SIM_MAX = 360; // max sim dimension (pixels)
+    const params = { wind: 0.5, height: 0.5, light: 0.5, paused: false };
+    const SIM_MAX = 360;
 
     const sim = document.createElement('canvas');
     const sctx = sim.getContext('2d', { alpha: false, desynchronized: true, willReadFrequently: true });
@@ -78,16 +269,10 @@
       canvas.width = W;
       canvas.height = H;
 
-      // Choose a small sim resolution, keeping aspect.
       const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
-      if(W >= H){
-        SH = maxDim;
-        SW = Math.floor(maxDim * (W/H));
-      } else {
-        SW = maxDim;
-        SH = Math.floor(maxDim * (H/W));
-      }
-      // Hard caps for ultrawide screens.
+      if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
+      else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
+
       SW = Math.min(SIM_MAX*2, Math.max(240, SW));
       SH = Math.min(SIM_MAX*2, Math.max(240, SH));
 
@@ -97,71 +282,62 @@
       pix = img.data;
       heights = new Float32Array(SW * SH);
     }
-
     window.addEventListener('resize', resize);
     resize();
 
-    // Cheap hash noise (fast)
     function hash2(x, y){
       let n = (x * 374761393 + y * 668265263) | 0;
       n = (n ^ (n >>> 13)) | 0;
       n = (n * 1274126177) | 0;
       return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
     }
-
     function valueNoise(x, y){
       const xi = Math.floor(x), yi = Math.floor(y);
       const xf = x - xi, yf = y - yi;
       const u = xf * xf * (3 - 2*xf);
       const v = yf * yf * (3 - 2*yf);
 
-      const a = hash2(xi, yi);
-      const b = hash2(xi+1, yi);
-      const c = hash2(xi, yi+1);
-      const d = hash2(xi+1, yi+1);
+      const a = hash2(xi, yi), b = hash2(xi+1, yi);
+      const c = hash2(xi, yi+1), d = hash2(xi+1, yi+1);
 
       const ab = a + (b-a)*u;
       const cd = c + (d-c)*u;
-      return (ab + (cd-ab)*v) * 2 - 1; // [-1,1]
+      return (ab + (cd-ab)*v) * 2 - 1;
     }
 
-    // Height field: 3 directional waves + 1 ripple noise layer
     function waveHeight(x, y, t, p){
       const wind = p.wind;
-      const amp = 0.35 + 1.15 * p.height;
-      const speed = 0.45 + 1.35 * wind;
+      const amp = 0.35 + 1.10 * p.height;
+      const speed = 0.35 + 1.05 * wind;
 
       const theta = -0.55 + wind * 0.95;
       const dx0 = Math.cos(theta), dy0 = Math.sin(theta);
 
       let h = 0;
 
-      // Fewer components for speed
-      const c0f=0.70, c0a=1.00;
-      const c1f=1.20, c1a=0.45;
-      const c2f=1.90, c2a=0.25;
+      const c0f=0.62, c0a=1.00;
+      const c1f=1.05, c1a=0.42;
+      const c2f=1.62, c2a=0.22;
 
-      // Component 0
-      let ph = (x*dx0 + y*dy0) * c0f + t * (0.95*c0f) * speed;
+      let ph = (x*dx0 + y*dy0) * c0f + t * (0.78*c0f) * speed;
       let s = Math.sin(ph);
-      h += (s + 0.28*s*s*s) * c0a;
+      h += (s + 0.26*s*s*s) * c0a;
 
-      // Component 1
-      const th1 = theta + 0.85;
-      ph = (x*Math.cos(th1) + y*Math.sin(th1)) * c1f + t * (1.05*c1f) * speed;
+      const th1 = theta + 0.82;
+      ph = (x*Math.cos(th1) + y*Math.sin(th1)) * c1f + t * (0.86*c1f) * speed;
       s = Math.sin(ph);
-      h += (s + 0.22*s*s*s) * c1a;
+      h += (s + 0.20*s*s*s) * c1a;
 
-      // Component 2
-      const th2 = theta - 1.10;
-      ph = (x*Math.cos(th2) + y*Math.sin(th2)) * c2f + t * (1.15*c2f) * speed;
+      const th2 = theta - 1.08;
+      ph = (x*Math.cos(th2) + y*Math.sin(th2)) * c2f + t * (0.92*c2f) * speed;
       s = Math.sin(ph);
-      h += (s + 0.18*s*s*s) * c2a;
+      h += (s + 0.16*s*s*s) * c2a;
 
-      // Ripples: advected value noise
-      const nx = x*0.55 + t*0.55*speed;
-      const ny = y*0.55 - t*0.48*speed;
-      h += (0.18 + 0.30*wind) * valueNoise(nx, ny);
+      const adv = t * 0.42 * speed;
+      const n1 = valueNoise(x*0.55 + adv, y*0.55 - adv);
+      const n2 = valueNoise(x*1.05 - adv*1.2, y*1.05 + adv*1.1);
+      h += (0.12 + 0.20*wind) * n1;
+      h += (0.06 + 0.10*wind) * n2;
 
       return (h * 0.22) * amp;
     }
@@ -169,16 +345,24 @@
     function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
     function lerp(a,b,t){ return a + (b-a)*t; }
 
-    const deep = [0.02, 0.15, 0.23];
-    const mid  = [0.03, 0.22, 0.30];
-    const crest= [0.10, 0.42, 0.48];
+    const deep0 = [0.01, 0.10, 0.16];
+    const deep1 = [0.02, 0.15, 0.22];
+    const mid0  = [0.03, 0.22, 0.30];
+    const mid1  = [0.05, 0.30, 0.36];
+    const crest = [0.12, 0.44, 0.48];
+    const sunGlint = [0.65, 0.90, 0.95];
 
     function lightDir(p){
-      const a = lerp(-0.35, 0.55, p.light);
-      const elev = lerp(0.50, 0.75, p.light);
+      const a = lerp(-0.25, 0.45, p.light);
+      const elev = lerp(0.58, 0.78, p.light);
       const lx = Math.cos(a), ly = Math.sin(a), lz = elev;
       const inv = 1/Math.hypot(lx,ly,lz);
       return [lx*inv, ly*inv, lz*inv];
+    }
+
+    function grain(x, y, t){
+      const g = valueNoise(x*0.35 + t*0.15, y*0.35 - t*0.12);
+      return g * 0.010;
     }
 
     let t0 = performance.now();
@@ -192,10 +376,8 @@
       const L = lightDir(params);
       const V = [0, 0, 1];
 
-      // World scale: larger = broader waves
-      const worldScale = lerp(2.2, 1.6, params.wind);
+      const worldScale = lerp(2.45, 1.85, params.wind);
 
-      // PASS 1: heights
       let idx = 0;
       for(let y=0; y<SH; y++){
         const vy = (y/SH - 0.5) * worldScale * (SH/SW);
@@ -205,7 +387,6 @@
         }
       }
 
-      // PASS 2: shading from height buffer
       const invDx = SW / worldScale;
       const invDy = SH / (worldScale * (SH/SW));
       const epsx = 1 / invDx;
@@ -215,6 +396,8 @@
       for(let y=0; y<SH; y++){
         const y0 = y === 0 ? 0 : y-1;
         const y1 = y === SH-1 ? SH-1 : y+1;
+        const uy = (y/SH - 0.5);
+
         for(let x=0; x<SW; x++){
           const x0 = x === 0 ? 0 : x-1;
           const x1 = x === SW-1 ? SW-1 : x+1;
@@ -228,49 +411,66 @@
           nx *= nInv; ny *= nInv; nz *= nInv;
 
           const ndotl = clamp01(nx*L[0] + ny*L[1] + nz*L[2]);
-          const diffuse = 0.18 + 0.72 * ndotl;
+          const diffuse = 0.22 + 0.58 * ndotl;
 
           const ndotv = clamp01(nz);
-          const fresnel = Math.pow(1 - ndotv, 2.2);
+          const fresnel = Math.pow(1 - ndotv, 1.8);
 
           const hxv = L[0] + V[0], hyv = L[1] + V[1], hzv = L[2] + V[2];
           const hInv = 1/Math.hypot(hxv, hyv, hzv);
           const Hx = hxv*hInv, Hy = hyv*hInv, Hz = hzv*hInv;
           const ndoth = clamp01(nx*Hx + ny*Hy + nz*Hz);
-          const shininess = lerp(55, 95, params.light);
-          const spec = Math.pow(ndoth, shininess) * lerp(0.18, 0.55, params.light);
+          const shininess = lerp(28, 55, params.light);
+          const spec = Math.pow(ndoth, shininess) * lerp(0.10, 0.22, params.light);
 
-          const slope = clamp01((1 - nz) * 2.2);
-          const foam = clamp01(0.10 + 0.55*slope);
+          const slope = clamp01((1 - nz) * 2.0);
+          const foam = clamp01(0.05 + 0.35*slope);
 
           const h = heights[i];
-          const hMix = clamp01(0.5 + h*3.0);
-          let r = lerp(deep[0], mid[0], hMix);
-          let g = lerp(deep[1], mid[1], hMix);
-          let b = lerp(deep[2], mid[2], hMix);
+          const hMix = clamp01(0.50 + h*2.6);
+
+          const t1 = clamp01(hMix*1.05);
+          let r = lerp(deep0[0], deep1[0], t1);
+          let g = lerp(deep0[1], deep1[1], t1);
+          let b = lerp(deep0[2], deep1[2], t1);
+
+          const t2 = clamp01((hMix - 0.25) / 0.85);
+          r = lerp(r, lerp(mid0[0], mid1[0], t2), t2);
+          g = lerp(g, lerp(mid0[1], mid1[1], t2), t2),;
+          b = lerp(b, lerp(mid0[2], mid1[2], t2), t2);
 
           r *= diffuse; g *= diffuse; b *= diffuse;
 
-          r = lerp(r, 0.10, fresnel*0.35);
-          g = lerp(g, 0.22, fresnel*0.35);
-          b = lerp(b, 0.30, fresnel*0.35);
+          const scatter = clamp01(0.18 + 0.65*ndotl);
+          r = lerp(r, 0.05, scatter*0.10);
+          g = lerp(g, 0.30, scatter*0.10);
+          b = lerp(b, 0.38, scatter*0.10);
 
-          r = lerp(r, crest[0], foam*0.35);
-          g = lerp(g, crest[1], foam*0.35);
-          b = lerp(b, crest[2], foam*0.35);
+          r = lerp(r, 0.10, fresnel*0.22);
+          g = lerp(g, 0.22, fresnel*0.22);
+          b = lerp(b, 0.30, fresnel*0.22);
 
-          r += spec; g += spec; b += spec;
+          r = lerp(r, crest[0], foam*0.50);
+          g = lerp(g, crest[1], foam*0.50);
+          b = lerp(b, crest[2], foam*0.50);
+
+          r = lerp(r, sunGlint[0], spec);
+          g = lerp(g, sunGlint[1], spec);
+          b = lerp(b, sunGlint[2], spec);
 
           const ux = (x/SW - 0.5);
-          const uy = (y/SH - 0.5);
-          const vv = clamp01(1 - (ux*ux + uy*uy)*1.1);
-          r *= (0.72 + 0.28*vv);
-          g *= (0.72 + 0.28*vv);
-          b *= (0.72 + 0.28*vv);
+          const vv = clamp01(1 - (ux*ux + uy*uy)*0.95);
+          const vfac = 0.82 + 0.18*vv;
+          r *= vfac; g *= vfac; b *= vfac;
 
-          pix[p++] = r<=0 ? 0 : (r>=1 ? 255 : (r*255)|0);
-          pix[p++] = g<=0 ? 0 : (g>=1 ? 255 : (g*255)|0);
-          pix[p++] = b<=0 ? 0 : (b>=1 ? 255 : (b*255)|0);
+          const gr = grain(x, y, simT);
+          r = clamp01(r + gr);
+          g = clamp01(g + gr);
+          b = clamp01(b + gr);
+
+          pix[p++] = (r*255)|0;
+          pix[p++] = (g*255)|0;
+          pix[p++] = (b*255)|0;
           pix[p++] = 255;
         }
       }
@@ -283,7 +483,6 @@
 
       requestAnimationFrame(frame);
     }
-
     requestAnimationFrame(frame);
 
     window.addEventListener('keydown', (e)=>{
