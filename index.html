@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ocean Wave Simulation</title>
+  <style>
+    :root{
+      --bg0:#07131d;
+      --bg1:#0a1e2d;
+      --panel:rgba(255,255,255,.06);
+      --text:rgba(255,255,255,.88);
+      --muted:rgba(255,255,255,.62);
+      --line:rgba(255,255,255,.12);
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background: radial-gradient(1200px 700px at 15% 10%, rgba(102,205,255,.14), transparent 55%),
+                  radial-gradient(900px 600px at 85% 20%, rgba(60,170,255,.10), transparent 60%),
+                  linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
+    .wrap{position:fixed; inset:0}
+    canvas{position:absolute; inset:0; width:100%; height:100%}
+
+    .hud{
+      position:absolute;
+      left:22px; top:22px;
+      width:min(380px, calc(100vw - 44px));
+      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.05));
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding:16px 16px 14px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .title{
+      display:flex; align-items:baseline; justify-content:space-between;
+      gap:12px;
+      padding-bottom:10px;
+      border-bottom:1px solid var(--line);
+      margin-bottom:12px;
+    }
+    .title h1{font-size:16px; font-weight:650; letter-spacing:.2px; margin:0}
+    .title .sub{font-size:12px; color:var(--muted)}
+
+    .row{display:grid; grid-template-columns: 1fr; gap:10px; margin:10px 0}
+    .control{display:grid; grid-template-columns: 1fr auto; gap:10px; align-items:center}
+    label{font-size:12px; color:var(--muted)}
+    output{font-variant-numeric: tabular-nums; font-size:12px; color:rgba(255,255,255,.8)}
+
+    input[type="range"]{
+      width:100%;
+      appearance:none;
+      height:10px;
+      border-radius:999px;
+      background: linear-gradient(90deg, rgba(138,214,255,.55), rgba(255,255,255,.14));
+      outline:none;
+      border:1px solid rgba(255,255,255,.10);
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      appearance:none;
+      width:18px; height:18px;
+      border-radius:50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(138,214,255,.75));
+      border:1px solid rgba(255,255,255,.28);
+      box-shadow: 0 10px 18px rgba(0,0,0,.35);
+    }
+
+    .note{font-size:12px; color:rgba(255,255,255,.55); margin-top:6px; line-height:1.35}
+    .pill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:8px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+      margin-top:10px;
+      user-select:none;
+    }
+    .dot{
+      width:8px; height:8px; border-radius:50%;
+      background: rgba(138,214,255,.9);
+      box-shadow: 0 0 0 3px rgba(138,214,255,.16);
+    }
+    .corner{
+      position:absolute; right:22px; bottom:22px;
+      padding:10px 12px;
+      border-radius: var(--radius);
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: var(--shadow);
+      color: rgba(255,255,255,.60);
+      font-size:12px;
+      max-width:min(520px, calc(100vw - 44px));
+      line-height:1.35;
+    }
+    .kbd{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:11px; color:rgba(255,255,255,.75);
+      border:1px solid rgba(255,255,255,.14);
+      padding:2px 6px;
+      border-radius:8px;
+      background: rgba(255,255,255,.06);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <canvas id="c"></canvas>
+
+    <div class="hud" role="group" aria-label="Wave controls">
+      <div class="title">
+        <h1>Ocean Wave Simulation</h1>
+        <div class="sub">calm, physically-inspired shading</div>
+      </div>
+
+      <div class="row">
+        <div class="control">
+          <label for="wind">Wind speed</label>
+          <output id="windOut"></output>
+        </div>
+        <input id="wind" type="range" min="0" max="100" step="1" value="45" />
+
+        <div class="control">
+          <label for="height">Wave height</label>
+          <output id="heightOut"></output>
+        </div>
+        <input id="height" type="range" min="0" max="100" step="1" value="55" />
+
+        <div class="control">
+          <label for="light">Lighting</label>
+          <output id="lightOut"></output>
+        </div>
+        <input id="light" type="range" min="0" max="100" step="1" value="62" />
+
+        <div class="pill" aria-hidden="true"><span class="dot"></span><span>Drag sliders. Press <span class="kbd">Space</span> to pause.</span></div>
+        <div class="note">Surface uses a multi-octave wave field driven by wind. Lighting adjusts sun angle and intensity for specular glints.</div>
+      </div>
+    </div>
+
+    <div class="corner" aria-hidden="true">
+      Tip: <span class="kbd">R</span> resets to default. Resizes smoothly with your window.
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+    const windEl = document.getElementById('wind');
+    const heightEl = document.getElementById('height');
+    const lightEl = document.getElementById('light');
+    const windOut = document.getElementById('windOut');
+    const heightOut = document.getElementById('heightOut');
+    const lightOut = document.getElementById('lightOut');
+
+    let W = 0, H = 0, dpr = 1;
+    function resize(){
+      dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      W = Math.floor(window.innerWidth * dpr);
+      H = Math.floor(window.innerHeight * dpr);
+      canvas.width = W;
+      canvas.height = H;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Simplex2D{
+      constructor(seed=1){
+        this.perm = new Uint8Array(512);
+        const p = new Uint8Array(256);
+        for(let i=0;i<256;i++) p[i]=i;
+        let s = seed >>> 0;
+        const rand = () => (s = (s*1664525 + 1013904223)>>>0) / 4294967296;
+        for(let i=255;i>0;i--){
+          const j = Math.floor(rand()*(i+1));
+          const t = p[i]; p[i]=p[j]; p[j]=t;
+        }
+        for(let i=0;i<512;i++) this.perm[i]=p[i&255];
+        this.grad3 = new Float32Array([
+          1,1,  -1,1,  1,-1,  -1,-1,
+          1,0,  -1,0,  1,0,   -1,0,
+          0,1,  0,-1,  0,1,   0,-1
+        ]);
+      }
+      noise(xin,yin){
+        const F2 = 0.5*(Math.sqrt(3)-1);
+        const G2 = (3-Math.sqrt(3))/6;
+        const s = (xin+yin)*F2;
+        const i = Math.floor(xin+s);
+        const j = Math.floor(yin+s);
+        const t = (i+j)*G2;
+        const X0 = i - t;
+        const Y0 = j - t;
+        const x0 = xin - X0;
+        const y0 = yin - Y0;
+
+        let i1, j1;
+        if(x0>y0){ i1=1; j1=0; } else { i1=0; j1=1; }
+
+        const x1 = x0 - i1 + G2;
+        const y1 = y0 - j1 + G2;
+        const x2 = x0 - 1 + 2*G2;
+        const y2 = y0 - 1 + 2*G2;
+
+        const ii = i & 255;
+        const jj = j & 255;
+        const gi0 = (this.perm[ii + this.perm[jj]] % 12) * 2;
+        const gi1 = (this.perm[ii + i1 + this.perm[jj + j1]] % 12) * 2;
+        const gi2 = (this.perm[ii + 1 + this.perm[jj + 1]] % 12) * 2;
+
+        let n0=0, n1=0, n2=0;
+        let t0 = 0.5 - x0*x0 - y0*y0;
+        if(t0>=0){
+          t0 *= t0;
+          n0 = t0 * t0 * (this.grad3[gi0]*x0 + this.grad3[gi0+1]*y0);
+        }
+        let t1 = 0.5 - x1*x1 - y1*y1;
+        if(t1>=0){
+          t1 *= t1;
+          n1 = t1 * t1 * (this.grad3[gi1]*x1 + this.grad3[gi1+1]*y1);
+        }
+        let t2 = 0.5 - x2*x2 - y2*y2;
+        if(t2>=0){
+          t2 *= t2;
+          n2 = t2 * t2 * (this.grad3[gi2]*x2 + this.grad3[gi2+1]*y2);
+        }
+        return 70 * (n0 + n1 + n2);
+      }
+    }
+
+    const noise = new Simplex2D(1337);
+
+    const state = { wind: 0.45, height: 0.55, light: 0.62, paused: false };
+
+    function syncUI(){
+      state.wind = +windEl.value / 100;
+      state.height = +heightEl.value / 100;
+      state.light = +lightEl.value / 100;
+
+      windOut.textContent = `${Math.round(state.wind*100)}%`;
+      heightOut.textContent = `${Math.round(state.height*100)}%`;
+      lightOut.textContent = `${Math.round(state.light*100)}%`;
+    }
+    windEl.addEventListener('input', syncUI);
+    heightEl.addEventListener('input', syncUI);
+    lightEl.addEventListener('input', syncUI);
+    syncUI();
+
+    function reset(){
+      windEl.value = 45;
+      heightEl.value = 55;
+      lightEl.value = 62;
+      syncUI();
+    }
+
+    window.addEventListener('keydown', (e)=>{
+      if(e.code === 'Space'){ state.paused = !state.paused; e.preventDefault(); }
+      if(e.key === 'r' || e.key === 'R') reset();
+    });
+
+    function waveHeight(x, y, t, p){
+      const wind = p.wind;
+      const amp = 0.35 + 1.25 * p.height;
+      const speed = 0.35 + 1.65 * wind;
+
+      const theta0 = -0.55 + wind * 0.95;
+      let h = 0;
+
+      const comps = [
+        {f:0.45, a:1.00, th: theta0},
+        {f:0.75, a:0.55, th: theta0 + 0.55},
+        {f:1.15, a:0.35, th: theta0 - 0.85},
+        {f:1.85, a:0.22, th: theta0 + 1.25},
+        {f:2.60, a:0.14, th: theta0 - 1.55},
+      ];
+
+      for(const c of comps){
+        const dx = Math.cos(c.th), dy = Math.sin(c.th);
+        const k = c.f * (1.25 + 0.9*wind);
+        const w = (0.9 + 1.6*wind) * c.f;
+        const ph = (x*dx + y*dy) * k + t * w * speed;
+        const s = Math.sin(ph);
+        const crest = s + 0.35*s*s*s;
+        h += crest * c.a;
+      }
+
+      const n = noise.noise(x*0.55 + t*0.18*speed, y*0.55 - t*0.16*speed);
+      const n2 = noise.noise(x*1.25 - t*0.32*speed, y*1.25 + t*0.30*speed);
+      h += (0.55 + 1.2*wind) * 0.55 * n;
+      h += (0.25 + 0.9*wind) * 0.25 * n2;
+
+      const distAtten = 0.86 + 0.14*Math.cos((x*Math.cos(theta0) + y*Math.sin(theta0))*0.08);
+      return (h * 0.22) * amp * distAtten;
+    }
+
+    function normalAt(x, y, t, p){
+      const e = 0.012;
+      const h  = waveHeight(x, y, t, p);
+      const hx = waveHeight(x+e, y, t, p);
+      const hy = waveHeight(x, y+e, t, p);
+      let nx = -(hx - h)/e;
+      let ny = -(hy - h)/e;
+      let nz = 1;
+      const inv = 1/Math.hypot(nx, ny, nz);
+      return [nx*inv, ny*inv, nz*inv];
+    }
+
+    function clamp01(v){ return v<0?0:(v>1?1:v); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function mix3(a,b,t){ return [lerp(a[0],b[0],t), lerp(a[1],b[1],t), lerp(a[2],b[2],t)]; }
+    function rgb(r,g,b){
+      r = Math.round(clamp01(r)*255);
+      g = Math.round(clamp01(g)*255);
+      b = Math.round(clamp01(b)*255);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    let t0 = performance.now();
+    let simT = 0;
+
+    function render(now){
+      const dt = Math.min(0.033, (now - t0) / 1000);
+      t0 = now;
+      if(!state.paused) simT += dt;
+
+      const gSky = ctx.createLinearGradient(0,0,0,H);
+      gSky.addColorStop(0, 'rgb(8, 22, 34)');
+      gSky.addColorStop(0.55, 'rgb(6, 18, 28)');
+      gSky.addColorStop(1, 'rgb(6, 16, 26)');
+      ctx.fillStyle = gSky;
+      ctx.fillRect(0,0,W,H);
+
+      const light = state.light;
+      const sunX = lerp(0.18, 0.78, light);
+      const sunY = lerp(0.18, 0.08, light);
+      const gx = W*sunX, gy = H*sunY;
+
+      const glow = ctx.createRadialGradient(gx, gy, 0, gx, gy, Math.min(W,H)*0.55);
+      glow.addColorStop(0, 'rgba(180,235,255,0.16)');
+      glow.addColorStop(0.25, 'rgba(120,205,255,0.10)');
+      glow.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0,0,W,H);
+
+      const horizon = Math.floor(H * 0.38);
+      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      ctx.fillRect(0, horizon-1, W, 1);
+
+      const oceanTop = horizon;
+      const oceanBottom = H;
+
+      const sunAngle = lerp(-0.45, 0.65, light);
+      const lx = Math.cos(sunAngle);
+      const ly = Math.sin(sunAngle);
+      const lz = lerp(0.35, 0.70, light);
+      const Linv = 1/Math.hypot(lx, ly, lz);
+      const L = [lx*Linv, ly*Linv, lz*Linv];
+
+      const V = [0, -0.15, 0.99];
+      const Vinv = 1/Math.hypot(V[0],V[1],V[2]);
+      V[0]*=Vinv; V[1]*=Vinv; V[2]*=Vinv;
+
+      const deep = [0.02, 0.16, 0.24];
+      const mid  = [0.03, 0.22, 0.30];
+      const crest= [0.10, 0.42, 0.48];
+
+      const lines = Math.max(280, Math.floor((oceanBottom-oceanTop) / (1.2*dpr)));
+      for(let i=0;i<lines;i++){
+        const y = oceanTop + (i/(lines-1))*(oceanBottom-oceanTop);
+        const depth = (y - oceanTop) / (oceanBottom - oceanTop);
+
+        const z = lerp(3.8, 0.35, Math.pow(depth, 0.72));
+        const worldY = simT*0.25 + z*2.0;
+
+        const span = lerp(5.2, 1.35, Math.pow(depth, 0.55));
+        const base = mix3(deep, mid, clamp01(0.15 + 0.85*depth));
+        const haze = Math.pow(1-depth, 2.2);
+
+        const xSamples = Math.max(220, Math.floor(W/(3.0*dpr)));
+        const dx = W / xSamples;
+
+        for(let s=0;s<xSamples;s++){
+          const x = s*dx;
+          const u = (x/W - 0.5);
+          const worldX = u * span;
+
+          const h = waveHeight(worldX, worldY, simT, state);
+          const n = normalAt(worldX, worldY, simT, state);
+
+          const ndotl = clamp01(n[0]*L[0] + n[1]*L[1] + n[2]*L[2]);
+          const diffuse = 0.10 + 0.75 * ndotl;
+
+          const ndotv = clamp01(n[0]*V[0] + n[1]*V[1] + n[2]*V[2]);
+          const fresnel = Math.pow(1-ndotv, 3.0);
+
+          const hx = L[0]+V[0], hy=L[1]+V[1], hz=L[2]+V[2];
+          const hinv = 1/Math.hypot(hx,hy,hz);
+          const Hh = [hx*hinv, hy*hinv, hz*hinv];
+          const ndoth = clamp01(n[0]*Hh[0] + n[1]*Hh[1] + n[2]*Hh[2]);
+          const shininess = lerp(35, 95, state.light);
+          const spec = Math.pow(ndoth, shininess) * lerp(0.18, 0.65, state.light);
+
+          const slope = clamp01((1-n[2]) * 2.4);
+          const whiten = clamp01(0.10*slope + 0.16*Math.max(0,h));
+
+          let col = mix3(base, crest, whiten);
+          col = [col[0]*diffuse, col[1]*diffuse, col[2]*diffuse];
+
+          const fresTint = [0.16, 0.32, 0.38];
+          col[0] = lerp(col[0], fresTint[0], fresnel*0.55);
+          col[1] = lerp(col[1], fresTint[1], fresnel*0.55);
+          col[2] = lerp(col[2], fresTint[2], fresnel*0.55);
+
+          col[0] += spec; col[1] += spec; col[2] += spec;
+
+          col[0] = lerp(col[0], 0.02, haze*0.55);
+          col[1] = lerp(col[1], 0.08, haze*0.55);
+          col[2] = lerp(col[2], 0.12, haze*0.55);
+
+          ctx.fillStyle = rgb(col[0], col[1], col[2]);
+          ctx.fillRect(x, y, dx+1, (oceanBottom-oceanTop)/lines + 1);
+        }
+
+        const nline = noise.noise(i*0.12, simT*0.6);
+        const a = (0.010 + 0.010*state.wind) * (0.45 + 0.55*depth) * (0.5 + 0.5*nline);
+        ctx.fillStyle = `rgba(0,0,0,${a})`;
+        ctx.fillRect(0, y, W, (oceanBottom-oceanTop)/lines + 1);
+      }
+
+      const streakY = horizon + (H-horizon)*0.62;
+      const streak = ctx.createRadialGradient(W*sunX, streakY, 0, W*sunX, streakY, W*0.55);
+      streak.addColorStop(0, `rgba(210,245,255,${0.10 + 0.10*state.light})`);
+      streak.addColorStop(0.18, `rgba(160,230,255,${0.06 + 0.06*state.light})`);
+      streak.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = streak;
+      ctx.fillRect(0, horizon, W, H-horizon);
+
+      const vig = ctx.createRadialGradient(W*0.5, H*0.55, Math.min(W,H)*0.1, W*0.5, H*0.55, Math.min(W,H)*0.75);
+      vig.addColorStop(0, 'rgba(0,0,0,0)');
+      vig.addColorStop(1, 'rgba(0,0,0,0.55)');
+      ctx.fillStyle = vig;
+      ctx.fillRect(0,0,W,H);
+
+      requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+  </script>
+</body>
+</html>
