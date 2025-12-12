@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reaction–Diffusion Ocean</title>
+  <style>
+    :root{
+      --bg0:#041018;
+      --bg1:#071b24;
+      --text:rgba(255,255,255,.86);
+      --line:rgba(255,255,255,.10);
+      --glass:rgba(0,0,0,.16);
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      overflow:hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 18% 12%, rgba(120,220,255,.10), transparent 58%),
+        radial-gradient(900px 650px at 82% 18%, rgba(70,190,255,.08), transparent 62%),
+        radial-gradient(900px 900px at 55% 85%, rgba(20,130,160,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+    canvas{position:fixed; inset:0; width:100%; height:100%}
+
+    .shell{
+      position:fixed;
+      left:18px;
+      top:16px;
+      width:min(980px, calc(100vw - 36px));
+      z-index:10;
+      pointer-events:none;
+    }
+    .label{
+      pointer-events:auto;
+      padding:12px 14px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.72);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+    }
+    .label b{color:rgba(255,255,255,.92); font-weight:680}
+    .role{color:rgba(255,255,255,.70)}
+    .meta{font-size:12px; color:rgba(255,255,255,.56); margin-top:3px}
+
+    .settings{
+      pointer-events:auto;
+      margin-left:auto;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      border-radius:999px;
+      padding:8px 12px;
+      cursor:pointer;
+      user-select:none;
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .settings[aria-pressed="true"]{
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .tune{
+      position:fixed;
+      right:18px;
+      top:16px;
+      width:min(380px, calc(100vw - 36px));
+      z-index:11;
+      pointer-events:none;
+      display:none;
+    }
+    .tune[data-open="true"]{display:block}
+
+    .panel{
+      pointer-events:auto;
+      margin-top:56px;
+      padding:14px;
+      border-radius:calc(var(--radius) + 2px);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      max-height:min(72vh,740px);
+      overflow:auto;
+    }
+
+    h2{margin:0 0 10px 0; font-size:14px; color:rgba(255,255,255,.90)}
+    .ctrl{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px;
+      margin-top:10px;
+    }
+    .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    label{font-size:12px; color:rgba(255,255,255,.72); letter-spacing:.2px}
+    .val{font-size:12px; color:rgba(255,255,255,.55); font-variant-numeric: tabular-nums}
+    input[type="range"]{
+      width:100%;
+      appearance:none;
+      height:28px;
+      background: transparent;
+      cursor:pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track{
+      height:2px;
+      background: rgba(255,255,255,.18);
+      border-radius:999px;
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      appearance:none;
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      margin-top:-6px;
+      background: rgba(255,255,255,.85);
+      border:1px solid rgba(0,0,0,.25);
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    input[type="range"]::-moz-range-track{
+      height:2px;
+      background: rgba(255,255,255,.18);
+      border-radius:999px;
+    }
+    input[type="range"]::-moz-range-thumb{
+      width:14px;height:14px;border-radius:999px;
+      background: rgba(255,255,255,.85);
+      border:1px solid rgba(0,0,0,.25);
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap; margin-top:12px}
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: rgba(255,255,255,.78);
+      padding:9px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      font-size:13px;
+      letter-spacing:.2px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .btn:hover{background: rgba(255,255,255,.08)}
+    .note{
+      margin-top:10px;
+      font-size:12px;
+      line-height:1.45;
+      color:rgba(255,255,255,.58);
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="shell">
+    <div class="label">
+      <div>
+        <b>Reaction–Diffusion Ocean</b> <span class="role">— Gray–Scott</span>
+        <div class="meta">Click or drag to inject “foam”. Adjust feed/kill to change patterns.</div>
+      </div>
+      <button class="settings" id="settingsBtn" type="button" aria-pressed="false">Settings</button>
+    </div>
+  </div>
+
+  <div class="tune" id="tune" data-open="false">
+    <div class="panel">
+      <h2>Reaction–diffusion tuning</h2>
+
+      <div class="ctrl">
+        <div class="top"><label for="feed">Feed (F)</label><div class="val" id="feedVal"></div></div>
+        <input id="feed" type="range" min="0.010" max="0.080" step="0.0005">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="kill">Kill (k)</label><div class="val" id="killVal"></div></div>
+        <input id="kill" type="range" min="0.030" max="0.080" step="0.0005">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="du">Diffusion U</label><div class="val" id="duVal"></div></div>
+        <input id="du" type="range" min="0.10" max="0.35" step="0.005">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="dv">Diffusion V</label><div class="val" id="dvVal"></div></div>
+        <input id="dv" type="range" min="0.02" max="0.25" step="0.005">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="dt">Time step</label><div class="val" id="dtVal"></div></div>
+        <input id="dt" type="range" min="0.5" max="1.5" step="0.01">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="adv">Advection (drift)</label><div class="val" id="advVal"></div></div>
+        <input id="adv" type="range" min="0.0" max="1.0" step="0.01">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="foam">Foam / whiteness</label><div class="val" id="foamVal"></div></div>
+        <input id="foam" type="range" min="0.0" max="2.0" step="0.01">
+      </div>
+
+      <div class="ctrl">
+        <div class="top"><label for="contrast">Depth / contrast</label><div class="val" id="contrastVal"></div></div>
+        <input id="contrast" type="range" min="0.6" max="1.8" step="0.01">
+      </div>
+
+      <div class="row">
+        <button class="btn" id="resetBtn" type="button">Reset</button>
+        <button class="btn" id="randomBtn" type="button">Randomize</button>
+      </div>
+
+      <div class="note">
+        Gray–Scott uses two chemicals (U,V). Patterns form where V rises.
+        Rendering maps V to “foam” and its gradients to shading.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+
+      const sim = document.createElement('canvas');
+      const sctx = sim.getContext('2d', { alpha:false, willReadFrequently:true });
+
+      const SIM_MAX = 360;
+      let W=0,H=0,SW=0,SH=0;
+
+      // Fields
+      let U=null, V=null, U2=null, V2=null;
+
+      // Rendering
+      let img=null, pix=null;
+
+      function resize(){
+        W = innerWidth; H = innerHeight;
+        canvas.width = W; canvas.height = H;
+
+        const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
+        if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
+        else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
+
+        SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+        SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+
+        sim.width = SW; sim.height = SH;
+        img = sctx.createImageData(SW, SH);
+        pix = img.data;
+
+        const N = SW * SH;
+        U  = new Float32Array(N);
+        V  = new Float32Array(N);
+        U2 = new Float32Array(N);
+        V2 = new Float32Array(N);
+
+        initFields();
+      }
+      addEventListener('resize', resize);
+      resize();
+
+      // Defaults (nice “coral/foam” regimes)
+      const defaults = {
+        F:  0.0367,
+        k:  0.0649,
+        Du: 0.16,
+        Dv: 0.08,
+        dt: 1.0,
+        adv: 0.22,
+        foam: 1.15,
+        contrast: 1.10
+      };
+      const P = {...defaults};
+
+      function initFields(){
+        // U=1 everywhere, V=0 with a few seeded blobs
+        U.fill(1.0);
+        V.fill(0.0);
+
+        // Central seed
+        seedDisc(SW*0.5, SH*0.5, Math.min(SW,SH)*0.08, 0.90);
+
+        // A couple small off-center seeds for flow
+        seedDisc(SW*0.35, SH*0.55, Math.min(SW,SH)*0.04, 0.80);
+        seedDisc(SW*0.62, SH*0.42, Math.min(SW,SH)*0.03, 0.75);
+      }
+
+      function seedDisc(cx, cy, r, strength){
+        const r2 = r*r;
+        const x0 = Math.max(0, Math.floor(cx - r));
+        const x1 = Math.min(SW-1, Math.ceil(cx + r));
+        const y0 = Math.max(0, Math.floor(cy - r));
+        const y1 = Math.min(SH-1, Math.ceil(cy + r));
+        for(let y=y0;y<=y1;y++){
+          for(let x=x0;x<=x1;x++){
+            const dx=x-cx, dy=y-cy;
+            if(dx*dx+dy*dy<=r2){
+              const i=y*SW+x;
+              V[i] = Math.min(1, V[i] + strength);
+              U[i] = Math.max(0, U[i] - strength*0.55);
+            }
+          }
+        }
+      }
+
+      // Interaction: inject V (foam) on pointer
+      let down = false;
+      function pointerPos(e){
+        const rect = canvas.getBoundingClientRect();
+        const px = (e.clientX - rect.left) / rect.width;
+        const py = (e.clientY - rect.top)  / rect.height;
+        return { x: px*SW, y: py*SH };
+      }
+      canvas.addEventListener('pointerdown', e=>{
+        down = true;
+        canvas.setPointerCapture(e.pointerId);
+        const p = pointerPos(e);
+        seedDisc(p.x, p.y, Math.min(SW,SH)*0.03, 0.95);
+      });
+      canvas.addEventListener('pointermove', e=>{
+        if(!down) return;
+        const p = pointerPos(e);
+        seedDisc(p.x, p.y, Math.min(SW,SH)*0.025, 0.75);
+      });
+      canvas.addEventListener('pointerup', ()=> down=false);
+      canvas.addEventListener('pointercancel', ()=> down=false);
+
+      // Laplacian (5-point + diagonals weights)
+      function lap(A, x, y){
+        const xm = (x===0)?0:x-1, xp = (x===SW-1)?SW-1:x+1;
+        const ym = (y===0)?0:y-1, yp = (y===SH-1)?SH-1:y+1;
+
+        const c  = A[y*SW + x];
+        const n  = A[ym*SW + x];
+        const s  = A[yp*SW + x];
+        const w  = A[y*SW + xm];
+        const e  = A[y*SW + xp];
+
+        const nw = A[ym*SW + xm];
+        const ne = A[ym*SW + xp];
+        const sw = A[yp*SW + xm];
+        const se = A[yp*SW + xp];
+
+        // Standard Gray–Scott weights
+        return (n + s + w + e - 4*c) * 0.20 + (nw + ne + sw + se - 4*c) * 0.05;
+      }
+
+      // Cheap pseudo-noise drift field (for advection)
+      function hash2(x,y){
+        let n = (x*374761393 + y*668265263) | 0;
+        n ^= (n>>>13);
+        n = (n*1274126177) | 0;
+        n ^= (n>>>16);
+        return (n>>>0) / 4294967296;
+      }
+
+      let t0 = performance.now();
+      let T = 0;
+
+      function step(){
+        // A few solver substeps per frame for smoother patterns
+        const substeps = 2;
+        const dt = P.dt * 1.0;
+
+        for(let s=0; s<substeps; s++){
+          // Update
+          for(let y=0; y<SH; y++){
+            for(let x=0; x<SW; x++){
+              const i = y*SW + x;
+              const u = U[i];
+              const v = V[i];
+
+              const uvv = u*v*v;
+
+              const Lu = lap(U, x, y);
+              const Lv = lap(V, x, y);
+
+              // Gray–Scott
+              let du = P.Du * Lu - uvv + P.F * (1 - u);
+              let dv = P.Dv * Lv + uvv - (P.F + P.k) * v;
+
+              // Gentle advection/drift: push patterns in a smooth-ish direction
+              if(P.adv > 0.0001){
+                const a = (hash2((x + (T*20)|0) & 1023, (y - (T*18)|0) & 1023) * 2 - 1);
+                const b = (hash2((x - (T*14)|0) & 1023, (y + (T*22)|0) & 1023) * 2 - 1);
+                // bias to a dominant direction (ocean drift) + tiny curl
+                const vx = 0.70 + a*0.35;
+                const vy = 0.20 + b*0.35;
+
+                const xm = (x===0)?0:x-1, xp = (x===SW-1)?SW-1:x+1;
+                const ym = (y===0)?0:y-1, yp = (y===SH-1)?SH-1:y+1;
+
+                const dudx = (U[y*SW + xp] - U[y*SW + xm]) * 0.5;
+                const dudy = (U[yp*SW + x] - U[ym*SW + x]) * 0.5;
+                const dvdx = (V[y*SW + xp] - V[y*SW + xm]) * 0.5;
+                const dvdy = (V[yp*SW + x] - V[ym*SW + x]) * 0.5;
+
+                du -= P.adv * (vx*dudx + vy*dudy) * 0.15;
+                dv -= P.adv * (vx*dvdx + vy*dvdy) * 0.15;
+              }
+
+              let un = u + du*dt;
+              let vn = v + dv*dt;
+
+              if(un < 0) un = 0; else if(un > 1) un = 1;
+              if(vn < 0) vn = 0; else if(vn > 1) vn = 1;
+
+              U2[i] = un;
+              V2[i] = vn;
+            }
+          }
+
+          // Swap
+          const tU=U; U=U2; U2=tU;
+          const tV=V; V=V2; V2=tV;
+
+          T += 0.010;
+        }
+      }
+
+      function clamp01(v){ return v<0?0:(v>1?1:v); }
+      function lerp(a,b,t){ return a + (b-a)*t; }
+      function smoothstep(a,b,x){
+        const t = clamp01((x-a)/(b-a));
+        return t*t*(3-2*t);
+      }
+
+      // Ocean-ish palette
+      const deep0 = [0.01, 0.10, 0.16];
+      const deep1 = [0.02, 0.17, 0.25];
+      const mid0  = [0.03, 0.25, 0.33];
+      const mid1  = [0.07, 0.35, 0.42];
+      const foamC = [0.92, 0.98, 1.00];
+      const glint = [0.55, 0.86, 0.94];
+
+      function render(){
+        // Render V as “foam” + gradients as shading
+        let p = 0;
+        for(let y=0; y<SH; y++){
+          const ym = (y===0)?0:y-1, yp = (y===SH-1)?SH-1:y+1;
+          const uy = (y/SH - 0.5);
+          for(let x=0; x<SW; x++){
+            const xm = (x===0)?0:x-1, xp = (x===SW-1)?SW-1:x+1;
+            const i = y*SW + x;
+
+            const v = V[i];
+
+            // Gradients of V for lighting
+            const gx = (V[y*SW + xp] - V[y*SW + xm]) * 0.5;
+            const gy = (V[yp*SW + x] - V[ym*SW + x]) * 0.5;
+            const g2 = gx*gx + gy*gy;
+
+            // Base depth from U with contrast control
+            const u = U[i];
+            const depth = clamp01((1 - u) * P.contrast);
+
+            let r = lerp(deep0[0], deep1[0], depth);
+            let g = lerp(deep0[1], deep1[1], depth);
+            let b = lerp(deep0[2], deep1[2], depth);
+
+            const m = clamp01((depth - 0.15) / 0.90);
+            r = lerp(r, lerp(mid0[0], mid1[0], m), m);
+            g = lerp(g, lerp(mid0[1], mid1[1], m), m);
+            b = lerp(b, lerp(mid0[2], mid1[2], m), m);
+
+            // Foam from V
+            const foam = smoothstep(0.15, 0.65, v) * P.foam;
+
+            // Glint from gradients (soft)
+            const gl = smoothstep(0.0005, 0.0065, g2) * 0.28;
+
+            r = lerp(r, glint[0], gl);
+            g = lerp(g, glint[1], gl);
+            b = lerp(b, glint[2], gl);
+
+            // Whiten where V is high
+            const ww = clamp01(foam);
+            r = lerp(r, foamC[0], ww);
+            g = lerp(g, foamC[1], ww);
+            b = lerp(b, foamC[2], ww);
+
+            // Gentle vignette
+            const ux = (x/SW - 0.5);
+            const vv = clamp01(1 - (ux*ux + uy*uy)*0.95);
+            const vfac = 0.86 + 0.14*vv;
+            r*=vfac; g*=vfac; b*=vfac;
+
+            pix[p++] = (r*255)|0;
+            pix[p++] = (g*255)|0;
+            pix[p++] = (b*255)|0;
+            pix[p++] = 255;
+          }
+        }
+
+        sctx.putImageData(img, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.drawImage(sim, 0, 0, W, H);
+      }
+
+      function frame(now){
+        const dt = Math.min(0.033, (now - t0) / 1000);
+        t0 = now;
+
+        // Couple steps per frame; dt slider is internal
+        step();
+        render();
+
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      // ---------- UI wiring ----------
+      const $ = id => document.getElementById(id);
+      const settingsBtn = $('settingsBtn');
+      const tune = $('tune');
+
+      function fmt(v, d=4){ return (+v).toFixed(d); }
+      function fmt2(v){ return (+v).toFixed(2); }
+
+      const binds = [
+        {k:'F', el:$('feed'), val:$('feedVal'), f: v=>fmt(v,4)},
+        {k:'k', el:$('kill'), val:$('killVal'), f: v=>fmt(v,4)},
+        {k:'Du', el:$('du'), val:$('duVal'), f: v=>fmt2(v)},
+        {k:'Dv', el:$('dv'), val:$('dvVal'), f: v=>fmt2(v)},
+        {k:'dt', el:$('dt'), val:$('dtVal'), f: v=>fmt2(v)},
+        {k:'adv', el:$('adv'), val:$('advVal'), f: v=>fmt2(v)},
+        {k:'foam', el:$('foam'), val:$('foamVal'), f: v=>fmt2(v)},
+        {k:'contrast', el:$('contrast'), val:$('contrastVal'), f: v=>fmt2(v)}
+      ];
+
+      function syncUI(){
+        for(const b of binds){
+          b.el.value = P[b.k];
+          b.val.textContent = b.f(P[b.k]);
+        }
+      }
+      for(const b of binds){
+        b.el.addEventListener('input', ()=>{
+          P[b.k] = parseFloat(b.el.value);
+          b.val.textContent = b.f(P[b.k]);
+        });
+      }
+
+      $('resetBtn').addEventListener('click', ()=>{
+        Object.assign(P, defaults);
+        initFields();
+        syncUI();
+      });
+
+      $('randomBtn').addEventListener('click', ()=>{
+        // Randomize within “ocean-friendly” ranges
+        const r = Math.random;
+        P.F  = 0.020 + r()*0.040;
+        P.k  = 0.045 + r()*0.030;
+        P.Du = 0.12  + r()*0.14;
+        P.Dv = 0.04  + r()*0.12;
+        P.dt = 0.80  + r()*0.50;
+        P.adv = r()*0.60;
+        P.foam = 0.70 + r()*1.10;
+        P.contrast = 0.85 + r()*0.70;
+
+        initFields();
+        syncUI();
+      });
+
+      settingsBtn.addEventListener('click', ()=>{
+        const open = tune.dataset.open === "true";
+        tune.dataset.open = open ? "false" : "true";
+        settingsBtn.setAttribute('aria-pressed', open ? "false" : "true");
+      });
+
+      syncUI();
+    })();
+  </script>
+</body>
+</html>

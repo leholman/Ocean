@@ -181,6 +181,35 @@
       const rdCtx = rdSim.getContext('2d', { alpha:false, willReadFrequently:true });
       let rdImg=null, rdPix=null, U=null, V=null, U2=null, V2=null;
 
+      function resize(){
+        W=innerWidth; H=innerHeight;
+        canvas.width=W; canvas.height=H;
+
+        const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
+        if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
+        else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
+
+        SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+        SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+
+        oceanSim.width=SW; oceanSim.height=SH;
+        oceanImg = oceanCtx.createImageData(SW,SH);
+        oceanPix = oceanImg.data;
+        oceanHeights = new Float32Array(SW*SH);
+
+        rdSim.width=SW; rdSim.height=SH;
+        rdImg = rdCtx.createImageData(SW,SH);
+        rdPix = rdImg.data;
+
+        const N=SW*SH;
+        U=new Float32Array(N); V=new Float32Array(N);
+        U2=new Float32Array(N); V2=new Float32Array(N);
+
+        initRDSpacedDots();
+      }
+      addEventListener('resize', resize);
+      resize();
+
       function clamp01(v){ return v<0?0:(v>1?1:v); }
       function lerp(a,b,t){ return a+(b-a)*t; }
       function smoothstep(a,b,x){
@@ -351,22 +380,18 @@
         oceanCtx.putImageData(oceanImg,0,0);
       }
 
-      // ---------- RD ----------
+      // ---------- RD: spaced random dots ----------
       let RD = {...PRESETS.research};
-      let rdDirty = true;
-
-      // Warm-up happens DURING the ocean page (non-blocking).
-      let warmupRemaining = 0;
-      let warmupInProgress = false;
 
       function initRDSpacedDots(){
         U.fill(1.0);
         V.fill(0.0);
 
         const minDim = Math.min(SW,SH);
-        const cell = Math.max(26, (minDim / 10) | 0);
+
+        const cell = Math.max(26, (minDim / 10) | 0);  // slightly more spaced than previous
         const dotR = Math.max(2, (cell * 0.13) | 0);
-        const pDot = 0.35;
+        const pDot = 0.35;                             // fewer dots
 
         for(let cy = cell/2; cy < SH; cy += cell){
           for(let cx = cell/2; cx < SW; cx += cell){
@@ -395,7 +420,6 @@
             }
           }
         }
-        rdDirty = true;
       }
 
       function lap(A,x,y){
@@ -458,27 +482,6 @@
           let tU=U; U=U2; U2=tU;
           let tV=V; V=V2; V2=tV;
         }
-        rdDirty = true;
-      }
-
-      function startWarmup(seconds){
-        // Target “~seconds at 60fps” but capped so it stays cheap.
-        const N = SW*SH;
-        const cap = (N > 220000) ? 260 : (N > 150000) ? 360 : 520;
-        warmupRemaining = Math.min(((seconds*60)|0), cap);
-        warmupInProgress = warmupRemaining > 0;
-      }
-
-      function warmupStepBudgeted(t){
-        if(!warmupInProgress) return;
-
-        const tStart = performance.now();
-        const budgetMs = 2.8; // keep ocean smooth
-        while(warmupRemaining > 0 && (performance.now() - tStart) < budgetMs){
-          stepRD(t);
-          warmupRemaining--;
-        }
-        if(warmupRemaining <= 0) warmupInProgress = false;
       }
 
       const rdCols = {
@@ -536,38 +539,7 @@
           }
         }
         rdCtx.putImageData(rdImg,0,0);
-        rdDirty = false;
       }
-
-      // ---------- Canvas sizes ----------
-      function resize(){
-        W=innerWidth; H=innerHeight;
-        canvas.width=W; canvas.height=H;
-
-        const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
-        if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
-        else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
-
-        SW = Math.max(240, Math.min(SIM_MAX*2, SW));
-        SH = Math.max(240, Math.min(SIM_MAX*2, SH));
-
-        oceanSim.width=SW; oceanSim.height=SH;
-        oceanImg = oceanCtx.createImageData(SW,SH);
-        oceanPix = oceanImg.data;
-        oceanHeights = new Float32Array(SW*SH);
-
-        rdSim.width=SW; rdSim.height=SH;
-        rdImg = rdCtx.createImageData(SW,SH);
-        rdPix = rdImg.data;
-
-        const N=SW*SH;
-        U=new Float32Array(N); V=new Float32Array(N);
-        U2=new Float32Array(N); V2=new Float32Array(N);
-
-        initRDSpacedDots();
-        startWarmup(20.0); // warm up while ocean is already showing (no startup hitch)
-      }
-      addEventListener('resize', resize);
 
       // ---------- Mode + crossfade ----------
       let mode="ocean", target="ocean";
@@ -603,17 +575,11 @@
         ctx.globalAlpha=1;
       }
 
-      let t0=performance.now();
-      let T=20.0; // ocean starts “~20s in” (free; no precompute)
+      let t0=performance.now(), T=0;
 
       function tick(now){
         const dt=Math.min(0.033,(now-t0)/1000);
         t0=now; T+=dt;
-
-        // Warm up RD in the background while on the ocean page (budgeted, non-blocking).
-        if(mode==="ocean" && warmupInProgress){
-          warmupStepBudgeted(T);
-        }
 
         if(!fading){
           if(mode==="ocean"){
@@ -639,6 +605,7 @@
 
         requestAnimationFrame(tick);
       }
+      requestAnimationFrame(tick);
 
       // ---------- UI ----------
       const pills=[...document.querySelectorAll('.pill')];
@@ -656,10 +623,6 @@
         pills.forEach(p=>p.setAttribute('aria-selected', String(p.dataset.tab===tab)));
         sections.forEach(s=>s.dataset.active = String(s.dataset.section===tab));
         applyPreset(tab);
-
-        // Ensure RD has an up-to-date image ready to fade in.
-        if(rdDirty) renderRD();
-
         beginFade("rd");
       }
 
@@ -681,13 +644,8 @@
 
       addEventListener('keydown', e => { if(e.key==="Escape") closePanel(); });
 
-      // Init: draw a first ocean frame immediately, then animate.
-      resize();
       closePanel();
       mode="ocean"; target="ocean"; fading=false;
-      renderOcean(T);
-      draw(0);
-      requestAnimationFrame(tick);
     })();
   </script>
 </body>

@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Luke E. Holman — Marine Researcher</title>
+
+  <style>
+    :root{
+      --bg0:#041018;
+      --bg1:#071b24;
+      --text:rgba(255,255,255,.86);
+      --line:rgba(255,255,255,.10);
+      --glass:rgba(0,0,0,.16);
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 18% 12%, rgba(120,220,255,.10), transparent 58%),
+        radial-gradient(900px 650px at 82% 18%, rgba(70,190,255,.08), transparent 62%),
+        radial-gradient(900px 900px at 55% 85%, rgba(20,130,160,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
+    canvas{position:fixed; inset:0; width:100%; height:100%}
+
+    .shell{
+      position:fixed;
+      left:18px;
+      top:16px;
+      width:min(980px, calc(100vw - 36px));
+      z-index:10;
+      pointer-events:none;
+    }
+    .label{
+      pointer-events:auto;
+      padding:12px 14px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.72);
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+    }
+    .label b{color:rgba(255,255,255,.92); font-weight:680}
+    .role{color:rgba(255,255,255,.70)}
+    .meta{font-size:12px; color:rgba(255,255,255,.56); margin-top:3px}
+
+    .nav{
+      pointer-events:auto;
+      margin-top:10px;
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: rgba(255,255,255,.78);
+      padding:10px 14px;
+      border-radius:999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor:pointer;
+      font-size:13px;
+      letter-spacing:.2px;
+      user-select:none;
+    }
+    .pill[aria-selected="true"]{
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .panel{
+      pointer-events:auto;
+      margin-top:12px;
+      padding:14px;
+      border-radius:calc(var(--radius) + 2px);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      max-height:min(68vh,740px);
+      overflow:auto;
+      display:none;
+    }
+    .panel[data-open="true"]{display:block}
+    .section{display:none}
+    .section[data-active="true"]{display:block}
+
+    h2{margin:0 0 10px 0; font-size:14px; color:rgba(255,255,255,.90)}
+    h3{margin:14px 0 6px 0; font-size:13px; color:rgba(255,255,255,.86)}
+    p{margin:0 0 10px 0; font-size:13px; line-height:1.55; color:rgba(255,255,255,.72)}
+    .card{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      border-radius:12px;
+      padding:12px;
+      margin-top:10px;
+    }
+    .linklist{display:flex; gap:12px; flex-wrap:wrap}
+    a{
+      color:rgba(140,220,255,.92);
+      text-decoration:none;
+      border-bottom:1px solid rgba(140,220,255,.30);
+    }
+    a:hover{border-bottom-color: rgba(140,220,255,.65)}
+
+    /* Settings panel */
+    .settings{
+      pointer-events:auto;
+      margin-left:auto;
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      border-radius:999px;
+      padding:8px 12px;
+      cursor:pointer;
+      user-select:none;
+      color:rgba(255,255,255,.78);
+      font-size:13px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .settings[aria-pressed="true"]{
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+    }
+    .tune{
+      margin-top:10px;
+      display:none;
+    }
+    .tune[data-open="true"]{display:block}
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px 14px;
+    }
+    .ctrl{
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      border-radius:12px;
+      padding:10px 10px;
+    }
+    .ctrl .top{
+      display:flex;
+      justify-content:space-between;
+      align-items:baseline;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .ctrl label{
+      font-size:12px;
+      color:rgba(255,255,255,.72);
+      letter-spacing:.2px;
+    }
+    .ctrl .val{
+      font-size:12px;
+      color:rgba(255,255,255,.55);
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="range"]{
+      width:100%;
+      appearance:none;
+      height:28px;
+      background: transparent;
+      cursor:pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track{
+      height:2px;
+      background: rgba(255,255,255,.18);
+      border-radius:999px;
+    }
+    input[type="range"]::-webkit-slider-thumb{
+      appearance:none;
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      margin-top:-6px;
+      background: rgba(255,255,255,.85);
+      border:1px solid rgba(0,0,0,.25);
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    input[type="range"]::-moz-range-track{
+      height:2px;
+      background: rgba(255,255,255,.18);
+      border-radius:999px;
+    }
+    input[type="range"]::-moz-range-thumb{
+      width:14px;height:14px;border-radius:999px;
+      background: rgba(255,255,255,.85);
+      border:1px solid rgba(0,0,0,.25);
+      box-shadow: 0 6px 16px rgba(0,0,0,.35);
+    }
+    .row{
+      display:flex;
+      gap:10px;
+      margin-top:10px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: rgba(255,255,255,.78);
+      padding:9px 12px;
+      border-radius:999px;
+      cursor:pointer;
+      user-select:none;
+      font-size:13px;
+      letter-spacing:.2px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .btn:hover{background: rgba(255,255,255,.08)}
+    .mono{font-variant-numeric: tabular-nums}
+
+    @media (max-width: 860px){
+      .grid{grid-template-columns:1fr}
+      .label{flex-direction:column}
+      .settings{margin-left:0}
+    }
+  </style>
+</head>
+
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="shell">
+    <div class="label">
+      <div>
+        <b>Luke E. Holman</b> <span class="role">— Marine Researcher</span>
+        <div class="meta">Population genomics • eDNA/metabarcoding • Coastal ecosystems</div>
+      </div>
+
+      <button class="settings" type="button" aria-pressed="false" id="settingsBtn">Settings</button>
+    </div>
+
+    <div class="tune" id="tune" data-open="false">
+      <div class="panel" style="display:block;">
+        <h2>Ocean tuning</h2>
+
+        <div class="grid">
+          <div class="ctrl">
+            <div class="top"><label for="speed">Speed</label><div class="val mono" id="speedVal"></div></div>
+            <input id="speed" type="range" min="0.15" max="1.40" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="height">Wave height</label><div class="val mono" id="heightVal"></div></div>
+            <input id="height" type="range" min="0.06" max="0.34" step="0.001" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="depth">Depth / color contrast</label><div class="val mono" id="depthVal"></div></div>
+            <input id="depth" type="range" min="0.55" max="1.45" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="glint">Glint</label><div class="val mono" id="glintVal"></div></div>
+            <input id="glint" type="range" min="0.00" max="1.20" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="foam">Foam whiteness</label><div class="val mono" id="foamVal"></div></div>
+            <input id="foam" type="range" min="0.00" max="1.35" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="breaks">Breaking frequency</label><div class="val mono" id="breaksVal"></div></div>
+            <input id="breaks" type="range" min="0.60" max="1.70" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="spray">Spray / sparkle</label><div class="val mono" id="sprayVal"></div></div>
+            <input id="spray" type="range" min="0.00" max="1.50" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="zoom">Zoom (wave scale)</label><div class="val mono" id="zoomVal"></div></div>
+            <input id="zoom" type="range" min="1.65" max="3.20" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="light">Lighting</label><div class="val mono" id="lightVal"></div></div>
+            <input id="light" type="range" min="0.20" max="1.10" step="0.01" />
+          </div>
+
+          <div class="ctrl">
+            <div class="top"><label for="vign">Vignette</label><div class="val mono" id="vignVal"></div></div>
+            <input id="vign" type="range" min="0.00" max="1.10" step="0.01" />
+          </div>
+        </div>
+
+        <div class="row">
+          <button class="btn" type="button" id="resetBtn">Reset</button>
+          <button class="btn" type="button" id="copyBtn">Copy settings</button>
+          <span class="meta mono" id="copied" style="display:none;">Copied</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav" role="tablist" aria-label="Site sections">
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="research">Research</button>
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="about">About me</button>
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="links">Links</button>
+    </div>
+
+    <div class="panel" data-open="false" role="region" aria-label="Content">
+      <div class="section" data-section="research" data-active="false">
+        <h2>Research</h2>
+        <div class="card">
+          <h3>Environmental DNA for biodiversity monitoring</h3>
+          <p>Filler text: sampling and analysis pipelines that turn water samples into robust, interpretable biodiversity signals, with emphasis on calibration and uncertainty.</p>
+        </div>
+        <div class="card">
+          <h3>Population structure and connectivity</h3>
+          <p>Filler text: integrating genetic markers with spatial models to infer dispersal, barriers to gene flow, and management-relevant connectivity.</p>
+        </div>
+        <div class="card">
+          <h3>Community change under environmental stressors</h3>
+          <p>Filler text: linking multi-trophic community composition to temperature, hypoxia, and human pressure using reproducible workflows.</p>
+        </div>
+      </div>
+
+      <div class="section" data-section="about" data-active="false">
+        <h2>About me</h2>
+        <p>Filler text: I work at the interface of molecular ecology and coastal ecosystem science, combining field sampling with DNA-based methods and quantitative analysis.</p>
+        <div class="card">
+          <p>Marine ecology • Molecular methods • Quantitative analysis</p>
+        </div>
+      </div>
+
+      <div class="section" data-section="links" data-active="false">
+        <h2>Links</h2>
+        <div class="linklist">
+          <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a>
+          <a href="https://bsky.app/" target="_blank" rel="noopener">Bluesky</a>
+          <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ---------- UI: sections ----------
+    (function(){
+      const pills = [...document.querySelectorAll('.pill')];
+      const panel = document.querySelector('.panel[data-open]');
+      const sections = [...document.querySelectorAll('.section')];
+
+      function openTab(tab){
+        panel.dataset.open = "true";
+        pills.forEach(p => p.setAttribute('aria-selected', String(p.dataset.tab === tab)));
+        sections.forEach(s => s.dataset.active = String(s.dataset.section === tab));
+      }
+      function closePanel(){
+        panel.dataset.open = "false";
+        pills.forEach(p => p.setAttribute('aria-selected', "false"));
+        sections.forEach(s => s.dataset.active = "false");
+      }
+
+      pills.forEach(p=>{
+        p.addEventListener('click', ()=>{
+          const same = p.getAttribute('aria-selected') === "true";
+          if(panel.dataset.open === "true" && same) closePanel();
+          else openTab(p.dataset.tab);
+        });
+      });
+
+      addEventListener('keydown', e => { if(e.key === "Escape") closePanel(); });
+      closePanel();
+    })();
+  </script>
+
+  <script>
+    // ---------- Ocean with integrated foam/spray + tuning controls ----------
+    (function(){
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+
+      const sim = document.createElement('canvas');
+      const sctx = sim.getContext('2d', { alpha:false, willReadFrequently:true });
+
+      const SIM_MAX = 360;
+
+      let W=0,H=0,SW=0,SH=0;
+      let img=null, pix=null, heights=null;
+
+      function resize(){
+        W = innerWidth; H = innerHeight;
+        canvas.width = W; canvas.height = H;
+
+        const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
+        if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
+        else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
+
+        SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+        SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+
+        sim.width = SW; sim.height = SH;
+        img = sctx.createImageData(SW, SH);
+        pix = img.data;
+        heights = new Float32Array(SW * SH);
+      }
+      addEventListener('resize', resize);
+      resize();
+
+      function hash2(x, y){
+        x |= 0; y |= 0;
+        let n = (x * 374761393 + y * 668265263) | 0;
+        n ^= (n >>> 13);
+        n = (n * 1274126177) | 0;
+        n ^= (n >>> 16);
+        return (n >>> 0) / 4294967296;
+      }
+      function vnoise(x, y){
+        const xi = Math.floor(x), yi = Math.floor(y);
+        const xf = x - xi, yf = y - yi;
+        const u = xf*xf*(3 - 2*xf);
+        const v = yf*yf*(3 - 2*yf);
+
+        const a = hash2(xi,   yi);
+        const b = hash2(xi+1, yi);
+        const c = hash2(xi,   yi+1);
+        const d = hash2(xi+1, yi+1);
+
+        const ab = a + (b-a)*u;
+        const cd = c + (d-c)*u;
+        return ((ab + (cd-ab)*v) * 2 - 1);
+      }
+
+      function clamp01(v){ return v < 0 ? 0 : (v > 1 ? 1 : v); }
+      function lerp(a,b,t){ return a + (b-a)*t; }
+      function smoothstep(a,b,x){
+        const t = clamp01((x - a) / (b - a));
+        return t*t*(3 - 2*t);
+      }
+
+      // Tunables (defaults = your liked version)
+      const defaults = {
+        speed: 0.62,
+        amp:   0.19,
+        depth: 1.00,
+        glint: 1.00,
+        foam:  1.00,
+        breaks:1.00,
+        spray: 1.00,
+        zoom:  2.30,
+        light: 1.00,
+        vign:  1.00
+      };
+      const P = {...defaults};
+
+      // Palette (base, depth slider scales contrast)
+      const deep0 = [0.01, 0.10, 0.16];
+      const deep1 = [0.02, 0.16, 0.24];
+      const mid0  = [0.03, 0.24, 0.32];
+      const mid1  = [0.06, 0.32, 0.40];
+      const crestCol = [0.90, 0.97, 1.00];
+      const glintCol = [0.55, 0.86, 0.94];
+
+      // Light base (slider scales tilt/intensity)
+      const baseL = { x: 0.45, y: -0.18, z: 0.87 };
+
+      // Wind direction for advection
+      const windAng = -0.55;
+      const wX = Math.cos(windAng), wY = Math.sin(windAng);
+
+      function waveHeight(x, y, t){
+        const th = -0.55;
+        const dx0 = Math.cos(th), dy0 = Math.sin(th);
+
+        const tt = t * P.speed;
+
+        let h = 0;
+
+        let ph = (x*dx0 + y*dy0) * 0.62 + tt * 0.60;
+        let s = Math.sin(ph);
+        h += (s + 0.20*s*s*s) * 1.00;
+
+        const th1 = th + 0.85;
+        ph = (x*Math.cos(th1) + y*Math.sin(th1)) * 0.98 + tt * 0.46;
+        s = Math.sin(ph);
+        h += (s + 0.16*s*s*s) * 0.45;
+
+        const th2 = th - 1.05;
+        ph = (x*Math.cos(th2) + y*Math.sin(th2)) * 1.35 + tt * 0.38;
+        s = Math.sin(ph);
+        h += (s + 0.12*s*s*s) * 0.24;
+
+        const adv = tt * 0.30;
+        h += vnoise(x*0.60 + adv, y*0.60 - adv) * 0.22;
+
+        return h * P.amp;
+      }
+
+      let t0 = performance.now();
+      let T = 0;
+
+      function frame(now){
+        const dt = Math.min(0.033, (now - t0) / 1000);
+        t0 = now;
+        T += dt;
+
+        const worldScale = P.zoom;
+        const aspect = SH / SW;
+
+        // Light vector
+        const lx = baseL.x * P.light;
+        const ly = baseL.y * P.light;
+        const lz = baseL.z;
+        const invL = 1/Math.hypot(lx,ly,lz);
+        const lX = lx*invL, lY = ly*invL, lZ = lz*invL;
+
+        // PASS 1: heights
+        let idx = 0;
+        for(let y=0; y<SH; y++){
+          const wy = (y/SH - 0.5) * worldScale * aspect;
+          for(let x=0; x<SW; x++, idx++){
+            const wx = (x/SW - 0.5) * worldScale;
+            heights[idx] = waveHeight(wx, wy, T);
+          }
+        }
+
+        // finite differences in world units
+        const epsx = worldScale / SW;
+        const epsy = (worldScale * aspect) / SH;
+        const inv2epsx = 1 / (2*epsx);
+        const inv2epsy = 1 / (2*epsy);
+
+        // Breaking controls (scaled)
+        const H_THR  = 0.095 * P.breaks;
+        const H_SOFT = 0.060;
+        const S_THR  = 0.075 * P.breaks;
+        const S_SOFT = 0.120;
+
+        let p = 0;
+        for(let y=0; y<SH; y++){
+          const y0 = (y === 0) ? 0 : y-1;
+          const y1 = (y === SH-1) ? SH-1 : y+1;
+          const uy = (y/SH - 0.5);
+
+          for(let x=0; x<SW; x++){
+            const x0 = (x === 0) ? 0 : x-1;
+            const x1 = (x === SW-1) ? SW-1 : x+1;
+
+            const i  = y*SW + x;
+            const h = heights[i];
+
+            const hx = (heights[y*SW + x1] - heights[y*SW + x0]) * inv2epsx;
+            const hy = (heights[y1*SW + x] - heights[y0*SW + x]) * inv2epsy;
+
+            let nx = -hx, ny = -hy, nz = 1;
+            const nInv = 1/Math.hypot(nx,ny,nz);
+            nx*=nInv; ny*=nInv; nz*=nInv;
+
+            const ndotl = clamp01(nx*lX + ny*lY + nz*lZ);
+            const diffuse = 0.28 + 0.52*ndotl;
+
+            // Height mix (depth scales contrast)
+            const hm = clamp01(0.50 + h*(2.25 * P.depth));
+            const t1 = clamp01(hm * 1.05);
+            let r = lerp(deep0[0], deep1[0], t1);
+            let g = lerp(deep0[1], deep1[1], t1);
+            let b = lerp(deep0[2], deep1[2], t1);
+
+            const t2 = clamp01((hm - 0.20) / 0.90);
+            r = lerp(r, lerp(mid0[0], mid1[0], t2), t2);
+            g = lerp(g, lerp(mid0[1], mid1[1], t2), t2);
+            b = lerp(b, lerp(mid0[2], mid1[2], t2), t2);
+
+            r *= diffuse; g *= diffuse; b *= diffuse;
+
+            // Glint
+            const slopeMag = Math.sqrt(hx*hx + hy*hy);
+            const slope = clamp01(slopeMag * 1.2);
+            const gl = Math.pow(ndotl, 6) * (0.08 + 0.18*slope) * P.glint;
+            r = lerp(r, glintCol[0], gl);
+            g = lerp(g, glintCol[1], gl);
+            b = lerp(b, glintCol[2], gl);
+
+            // Foam / spray
+            const foamH = smoothstep(H_THR, H_THR + H_SOFT, h);
+            const foamS = smoothstep(S_THR, S_THR + S_SOFT, slopeMag);
+            let foam = foamH * foamS;
+
+            const wx = (x/SW - 0.5);
+            const wy = (y/SH - 0.5);
+
+            const adv = T * 0.10 * P.speed;
+            const edge = vnoise((wx*5.0) + wX*adv, (wy*5.0) + wY*adv);
+            const edgeMask = smoothstep(-0.15, 0.55, edge);
+            foam *= (0.55 + 0.45*edgeMask);
+
+            const adv2 = T * 0.35 * P.speed;
+            const sp = vnoise(wx*22.0 + wX*adv2, wy*22.0 + wY*adv2);
+            const speck = smoothstep(0.35, 0.78, sp);
+            const spray = foam * speck * 0.55 * P.spray;
+
+            const foamFill = foam * 0.55;
+            const whitewater = clamp01((foamFill + spray) * P.foam);
+
+            r = lerp(r, crestCol[0], whitewater);
+            g = lerp(g, crestCol[1], whitewater);
+            b = lerp(b, crestCol[2], whitewater);
+
+            const bloom = whitewater * (0.06 + 0.10*ndotl);
+            r = clamp01(r + bloom);
+            g = clamp01(g + bloom);
+            b = clamp01(b + bloom);
+
+            // Vignette
+            const ux = (x/SW - 0.5);
+            const vv = clamp01(1 - (ux*ux + uy*uy)*(0.90 + 0.20*P.vign));
+            const vfac = 0.86 + 0.14*vv;
+            r*=vfac; g*=vfac; b*=vfac;
+
+            // Dither
+            const gr = vnoise(x*0.18 + T*0.06, y*0.18 - T*0.05) * 0.008;
+            r = clamp01(r + gr);
+            g = clamp01(g + gr);
+            b = clamp01(b + gr);
+
+            pix[p++] = (r*255)|0;
+            pix[p++] = (g*255)|0;
+            pix[p++] = (b*255)|0;
+            pix[p++] = 255;
+          }
+        }
+
+        sctx.putImageData(img, 0, 0);
+        ctx.imageSmoothingEnabled = true;
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.drawImage(sim, 0, 0, W, H);
+
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+
+      // ---------- Settings UI wiring ----------
+      const $ = (id)=>document.getElementById(id);
+
+      const settingsBtn = $('settingsBtn');
+      const tune = $('tune');
+
+      function fmt(v){ return (+v).toFixed(2); }
+      function fmt3(v){ return (+v).toFixed(3); }
+
+      const binds = [
+        {k:'speed',  el:$('speed'),  val:$('speedVal'),  f:fmt},
+        {k:'amp',    el:$('height'), val:$('heightVal'), f:fmt3},
+        {k:'depth',  el:$('depth'),  val:$('depthVal'),  f:fmt},
+        {k:'glint',  el:$('glint'),  val:$('glintVal'),  f:fmt},
+        {k:'foam',   el:$('foam'),   val:$('foamVal'),   f:fmt},
+        {k:'breaks', el:$('breaks'), val:$('breaksVal'), f:fmt},
+        {k:'spray',  el:$('spray'),  val:$('sprayVal'),  f:fmt},
+        {k:'zoom',   el:$('zoom'),   val:$('zoomVal'),   f:fmt},
+        {k:'light',  el:$('light'),  val:$('lightVal'),  f:fmt},
+        {k:'vign',   el:$('vign'),   val:$('vignVal'),   f:fmt},
+      ];
+
+      function syncUI(){
+        for(const b of binds){
+          b.el.value = P[b.k];
+          b.val.textContent = b.f(P[b.k]);
+        }
+      }
+
+      for(const b of binds){
+        b.el.addEventListener('input', ()=>{
+          P[b.k] = parseFloat(b.el.value);
+          b.val.textContent = b.f(P[b.k]);
+        });
+      }
+
+      $('resetBtn').addEventListener('click', ()=>{
+        Object.assign(P, defaults);
+        syncUI();
+      });
+
+      $('copyBtn').addEventListener('click', async ()=>{
+        const payload = JSON.stringify(P, null, 2);
+        try{
+          await navigator.clipboard.writeText(payload);
+          const tag = $('copied');
+          tag.style.display = 'inline';
+          setTimeout(()=>tag.style.display='none', 900);
+        }catch(e){
+          // no-op (clipboard may be blocked)
+        }
+      });
+
+      settingsBtn.addEventListener('click', ()=>{
+        const open = tune.dataset.open === "true";
+        tune.dataset.open = open ? "false" : "true";
+        settingsBtn.setAttribute('aria-pressed', open ? "false" : "true");
+      });
+
+      // Init
+      syncUI();
+    })();
+  </script>
+</body>
+</html>
