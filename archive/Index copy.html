@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Luke E. Holman</title>
+  <title>Luke E. Holman — Marine Researcher</title>
   <style>
     :root{
       --bg0:#041018; --bg1:#071b24;
@@ -63,8 +63,6 @@
       text-align:left;
       transition: color 0.2s ease;
     }
-    .link{
- 	 font-size: clamp(60px, 10vw, 170px); }
     .link:hover{ color:#9fd8ff; }
     .link[aria-selected="true"]{ color:#9fd8ff; }
 
@@ -206,12 +204,12 @@
       const canvas = document.getElementById('c');
       const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
 
-      const SIM_MAX = 260;
+      const SIM_MAX = 360;
       let W=0,H=0,SW=0,SH=0;
 
       const oceanSim = document.createElement('canvas');
       const oceanCtx = oceanSim.getContext('2d', { alpha:false, willReadFrequently:true });
-      let oceanImg=null, oceanPix=null;
+      let oceanImg=null, oceanPix=null, oceanHeights=null;
 
       const rdSim = document.createElement('canvas');
       const rdCtx = rdSim.getContext('2d', { alpha:false, willReadFrequently:true });
@@ -248,472 +246,143 @@
         return ((ab + (cd-ab)*v) * 2 - 1);
       }
 
-      // ============================================================
-      //  OCEAN V2 — Gerstner waves with Jacobian-based breaking
-      //  Renders into the existing oceanCtx / oceanImg / oceanPix.
-      //  All settings are baked in from the prototype.
-      // ============================================================
-
-      // Locked-in V2 parameters
-      const O2 = {
-        amp:0.60, peakLambda:0.50, specWidth:1.75,
-        meanDir:0.20, dirSpread:0.32,
-        Q:0.38, shapeK:6.0,
-        zoom:6.00, timeScale:0.35,
-
-        foldThr:0.00, foldGain:6.0,
-        patchSize:0.70, patchThr:-0.10,
-        foamDecay:1.33, foamSpread:0.00, foamDrift:0.35,
-
-        cDeep:[0.016,0.078,0.122],
-        cMid: [0.039,0.208,0.314],
-        cCrest:[0.165,0.471,0.659],
-        cFoam:[0.961,0.984,1.000],
-
-        faceShade:0.55, foamEdge:0.20, vign:1.30
+      const O = { speed:0.62, amp:0.19, depth:1.00, glint:1.00, foam:1.00, breaks:1.00, spray:1.00, zoom:2.30, light:1.00, vign:1.00 };
+      const oceanCols = {
+        deep0:[0.01,0.10,0.16], deep1:[0.02,0.16,0.24],
+        mid0:[0.03,0.24,0.32],  mid1:[0.06,0.32,0.40],
+        crest:[0.90,0.97,1.00], glint:[0.55,0.86,0.94]
       };
+      const baseL = { x:0.45, y:-0.18, z:0.87 };
+      const windAng = -0.55;
+      const wX = Math.cos(windAng), wY = Math.sin(windAng);
 
-      // V2 buffers (allocated by resizeOceanBuffers, called from resize())
-      let foamBuf=null, foamNextBuf=null;
-      let heightBuf=null, gradXBuf=null, gradYBuf=null, foldBuf=null;
-      let LSW=0, LSH=0;
-      let lowH=null, lowHx=null, lowHy=null, lowFold=null, lowW=null;
+      function oceanHeight(wx, wy, t){
+        const th=-0.55;
+        const dx0=Math.cos(th), dy0=Math.sin(th);
+        const tt=t*O.speed;
+        let h=0;
 
-      // Spectrum (flat arrays for hot loop)
-      const N_COMP = 12;
-      const comp_k     = new Float32Array(N_COMP);
-      const comp_dx    = new Float32Array(N_COMP);
-      const comp_dy    = new Float32Array(N_COMP);
-      const comp_a     = new Float32Array(N_COMP);
-      const comp_omega = new Float32Array(N_COMP);
-      const comp_phase = new Float32Array(N_COMP);
-      const comp_sinB  = new Float32Array(N_COMP);
-      const comp_cosB  = new Float32Array(N_COMP);
-      const comp_kdx   = new Float32Array(N_COMP);
-      const comp_kdy   = new Float32Array(N_COMP);
-      const comp_qa    = new Float32Array(N_COMP);
-      const comp_active = new Uint8Array(N_COMP);
-      let nActiveComp = N_COMP;
+        let ph=(wx*dx0+wy*dy0)*0.62 + tt*0.60;
+        let s=Math.sin(ph); h += (s + 0.20*s*s*s)*1.00;
 
-      function _h01(i){
-        let n = (i*374761393 + 668265263)|0;
-        n ^= (n>>>13);
-        n = (n*1274126177)|0;
-        n ^= (n>>>16);
-        return (n>>>0)/4294967296;
-      }
+        const th1=th+0.85;
+        ph=(wx*Math.cos(th1)+wy*Math.sin(th1))*0.98 + tt*0.46;
+        s=Math.sin(ph); h += (s + 0.16*s*s*s)*0.45;
 
-      let _lastSpecSize = -1;
-      function rebuildSpectrum(){
-        if(_lastSpecSize === SW) return;
-        _lastSpecSize = SW;
+        const th2=th-1.05;
+        ph=(wx*Math.cos(th2)+wy*Math.sin(th2))*1.35 + tt*0.38;
+        s=Math.sin(ph); h += (s + 0.12*s*s*s)*0.24;
 
-        const kPeak = (2*Math.PI) / O2.peakLambda;
-        const kMin = kPeak / (1 + O2.specWidth);
-        const kMax = kPeak * (1 + O2.specWidth);
-        let totalEnergy = 0;
-        const minLambdaNyquist = (O2.zoom / SW) * 4;
+        const adv=tt*0.30;
+        h += vnoise(wx*0.60+adv, wy*0.60-adv)*0.22;
 
-        let active = 0;
-        for(let i=0; i<N_COMP; i++){
-          const u = (i + 0.5)/N_COMP;
-          const jitter = (_h01(i*7+1) - 0.5) * (1/N_COMP);
-          const kFrac = u + jitter;
-          const k = kMin * Math.pow(kMax/kMin, kFrac);
-          const lambda = (2*Math.PI)/k;
-
-          const angleOff = (_h01(i*11+3) - 0.5) * O2.dirSpread * 4;
-          const dir = O2.meanDir + angleOff;
-
-          const r = k / kPeak;
-          const energy = Math.exp(-Math.pow((r-1)/O2.specWidth, 2) * 0.8) / (k*k);
-          const a = Math.sqrt(energy);
-
-          const cosA = Math.cos(angleOff);
-          const dirW = Math.max(0, cosA*cosA);
-          const finalA = a * Math.sqrt(dirW + 0.05);
-
-          const isActive = (lambda >= minLambdaNyquist) ? 1 : 0;
-          comp_active[i] = isActive;
-          if(isActive) active++;
-          totalEnergy += isActive * finalA*finalA;
-
-          comp_k[i] = k;
-          comp_dx[i] = Math.cos(dir);
-          comp_dy[i] = Math.sin(dir);
-          comp_a[i] = finalA;
-          comp_omega[i] = Math.sqrt(k);
-          comp_phase[i] = _h01(i*17+5) * Math.PI * 2;
-        }
-        nActiveComp = Math.max(1, active);
-
-        const norm = 1 / Math.sqrt(totalEnergy + 1e-6);
-        for(let i=0; i<N_COMP; i++){
-          comp_a[i] *= norm;
-          comp_kdx[i] = comp_k[i] * comp_dx[i];
-          comp_kdy[i] = comp_k[i] * comp_dy[i];
-          comp_qa[i] = O2.Q / (comp_k[i] * nActiveComp);
-        }
-      }
-
-      function cacheTemporalTrig(t){
-        const tt = t * O2.timeScale;
-        for(let i=0; i<N_COMP; i++){
-          if(!comp_active[i]) continue;
-          const B = comp_omega[i]*tt - comp_phase[i];
-          comp_sinB[i] = Math.sin(B);
-          comp_cosB[i] = Math.cos(B);
-        }
-      }
-
-      // Single-sample Gerstner output
-      const _g = { wx2:0, wy2:0, h:0, hx:0, hy:0, J:0 };
-
-      function evalGerstner(wx, wy, out){
-        let dx_disp = 0, dy_disp = 0;
-        let dDx_dx = 0, dDx_dy = 0, dDy_dx = 0, dDy_dy = 0;
-        let h = 0, hx = 0, hy = 0;
-        const k_exp = O2.shapeK;
-
-        for(let i=0; i<N_COMP; i++){
-          if(!comp_active[i]) continue;
-          const theta = comp_kdx[i]*wx + comp_kdy[i]*wy;
-          const sT = Math.sin(theta), cT = Math.cos(theta);
-          const cP = cT*comp_cosB[i] + sT*comp_sinB[i];
-          const sP = sT*comp_cosB[i] - cT*comp_sinB[i];
-
-          const base = 0.5*(cP + 1);
-          const shaped = Math.pow(base, k_exp);
-          const shapedCentered = shaped*2 - 1;
-          h += comp_a[i] * shapedCentered;
-
-          const dShape_dphase = k_exp * (shaped / Math.max(base, 1e-4)) * (-sP);
-          const dh_factor = comp_a[i] * dShape_dphase;
-          hx += dh_factor * comp_kdx[i];
-          hy += dh_factor * comp_kdy[i];
-
-          const qa = comp_qa[i];
-          dx_disp += -qa * comp_dx[i] * sP;
-          dy_disp += -qa * comp_dy[i] * sP;
-
-          const cosPhi_qa = -qa * cP;
-          dDx_dx += cosPhi_qa * comp_dx[i] * comp_kdx[i];
-          dDx_dy += cosPhi_qa * comp_dx[i] * comp_kdy[i];
-          dDy_dx += cosPhi_qa * comp_dy[i] * comp_kdx[i];
-          dDy_dy += cosPhi_qa * comp_dy[i] * comp_kdy[i];
-        }
-
-        const A = O2.amp;
-        out.h  = h * A;
-        out.hx = hx * A;
-        out.hy = hy * A;
-        out.wx2 = wx + dx_disp * A;
-        out.wy2 = wy + dy_disp * A;
-
-        const m00 = 1 + A*dDx_dx;
-        const m11 = 1 + A*dDy_dy;
-        out.J = m00*m11 - A*A*dDx_dy*dDy_dx;
-      }
-
-      let oceanLastT = 0;
-      function stepOcean(t){
-        let dt = t - oceanLastT;
-        if(dt < 0) dt = 0;
-        if(dt > 0.05) dt = 0.05;
-        oceanLastT = t;
-
-        rebuildSpectrum();
-        cacheTemporalTrig(t);
-
-        const aspect = SH/SW;
-        const Z = O2.zoom;
-        const meanDx = Math.cos(O2.meanDir), meanDy = Math.sin(O2.meanDir);
-        const pxToWorld_x = Z / SW;
-        const pxToWorld_y = (Z*aspect) / SH;
-
-        // Pass 1: forward-splat Gerstner samples into low-res buffers
-        lowH.fill(0); lowHx.fill(0); lowHy.fill(0); lowFold.fill(0); lowW.fill(0);
-
-        const SRC_DENSITY = 1.5;
-        const sourceW = (LSW * SRC_DENSITY)|0;
-        const sourceH = (LSH * SRC_DENSITY)|0;
-        const margin = Z * 0.10;
-
-        const srcStep_x = (Z + 2*margin) / sourceW;
-        const srcStep_y = (Z*aspect + 2*margin) / sourceH;
-        const srcWx0 = -Z*0.5 - margin;
-        const srcWy0 = -Z*aspect*0.5 - margin;
-
-        const lowStep_x = Z / (LSW - 2);
-        const lowStep_y = (Z*aspect) / (LSH - 2);
-        const inv_lowStep_x = 1/lowStep_x;
-        const inv_lowStep_y = 1/lowStep_y;
-        const lowX0 = Z*0.5*inv_lowStep_x + 1;
-        const lowY0 = Z*aspect*0.5*inv_lowStep_y + 1;
-
-        for(let sy = 0; sy < sourceH; sy++){
-          const wy = srcWy0 + (sy + 0.5)*srcStep_y;
-          for(let sx = 0; sx < sourceW; sx++){
-            const wx = srcWx0 + (sx + 0.5)*srcStep_x;
-            evalGerstner(wx, wy, _g);
-
-            const foldAmount = Math.max(0, 1 - _g.J);
-
-            const lxF = _g.wx2 * inv_lowStep_x + lowX0;
-            const lyF = _g.wy2 * inv_lowStep_y + lowY0;
-            const lx0 = lxF | 0;
-            const ly0 = lyF | 0;
-            if(lx0 < 0 || lx0 >= LSW-1 || ly0 < 0 || ly0 >= LSH-1) continue;
-            const fx = lxF - lx0;
-            const fy = lyF - ly0;
-
-            const w00 = (1-fx)*(1-fy);
-            const w10 = fx*(1-fy);
-            const w01 = (1-fx)*fy;
-            const w11 = fx*fy;
-
-            const i00 = ly0*LSW + lx0;
-            const i10 = i00 + 1;
-            const i01 = i00 + LSW;
-            const i11 = i01 + 1;
-
-            lowH[i00]   += _g.h * w00;
-            lowH[i10]   += _g.h * w10;
-            lowH[i01]   += _g.h * w01;
-            lowH[i11]   += _g.h * w11;
-
-            lowHx[i00]  += _g.hx * w00;
-            lowHx[i10]  += _g.hx * w10;
-            lowHx[i01]  += _g.hx * w01;
-            lowHx[i11]  += _g.hx * w11;
-
-            lowHy[i00]  += _g.hy * w00;
-            lowHy[i10]  += _g.hy * w10;
-            lowHy[i01]  += _g.hy * w01;
-            lowHy[i11]  += _g.hy * w11;
-
-            lowFold[i00] += foldAmount * w00;
-            lowFold[i10] += foldAmount * w10;
-            lowFold[i01] += foldAmount * w01;
-            lowFold[i11] += foldAmount * w11;
-
-            lowW[i00] += w00;
-            lowW[i10] += w10;
-            lowW[i01] += w01;
-            lowW[i11] += w11;
-          }
-        }
-
-        const lN = LSW*LSH;
-        for(let i=0; i<lN; i++){
-          const w = lowW[i];
-          if(w > 1e-4){
-            const inv = 1/w;
-            lowH[i]    *= inv;
-            lowHx[i]   *= inv;
-            lowHy[i]   *= inv;
-            lowFold[i] *= inv;
-          }
-        }
-
-        // Pass 2: bilinear upsample → sim-res buffers
-        {
-          let i = 0;
-          for(let y=0; y<SH; y++){
-            const lyF = y*0.5 + 0.75;
-            const ly0 = lyF|0;
-            const fy = lyF - ly0;
-            const ly1 = ly0 + 1;
-            const row0 = ly0*LSW;
-            const row1 = ly1*LSW;
-            for(let x=0; x<SW; x++, i++){
-              const lxF = x*0.5 + 0.75;
-              const lx0 = lxF|0;
-              const fx = lxF - lx0;
-              const lx1 = lx0 + 1;
-
-              const i00 = row0+lx0, i10 = row0+lx1;
-              const i01 = row1+lx0, i11 = row1+lx1;
-              const oneMfx = 1-fx, oneMfy = 1-fy;
-              const w00 = oneMfx*oneMfy, w10 = fx*oneMfy;
-              const w01 = oneMfx*fy,     w11 = fx*fy;
-
-              heightBuf[i] = lowH[i00]*w00 + lowH[i10]*w10 + lowH[i01]*w01 + lowH[i11]*w11;
-              gradXBuf[i]  = lowHx[i00]*w00 + lowHx[i10]*w10 + lowHx[i01]*w01 + lowHx[i11]*w11;
-              gradYBuf[i]  = lowHy[i00]*w00 + lowHy[i10]*w10 + lowHy[i01]*w01 + lowHy[i11]*w11;
-              foldBuf[i]   = lowFold[i00]*w00 + lowFold[i10]*w10 + lowFold[i01]*w01 + lowFold[i11]*w11;
-            }
-          }
-        }
-
-        // Pass 3: deposit foam where surface folds, gated by patch noise
-        const advAdv = t*0.04;
-        const patchScale = 1.0 / Math.max(0.05, O2.patchSize);
-
-        for(let y=0; y<SH; y++){
-          for(let x=0; x<SW; x++){
-            const idx = y*SW + x;
-            const fold = foldBuf[idx];
-            if(fold < O2.foldThr) continue;
-
-            const wx = (x/SW - 0.5)*Z;
-            const wy = (y/SH - 0.5)*Z*aspect;
-            const pa = vnoise(wx*patchScale + meanDx*advAdv, wy*patchScale + meanDy*advAdv);
-            const pb = vnoise(wx*patchScale*2 - meanDx*advAdv*0.5, wy*patchScale*2 - meanDy*advAdv*0.5)*0.5;
-            const patch = (pa + pb)*0.6;
-            const patchFactor = smoothstep(O2.patchThr, O2.patchThr+0.3, patch);
-            if(patchFactor <= 0) continue;
-
-            const B = (fold - O2.foldThr) * patchFactor;
-            foamBuf[idx] += B * O2.foldGain * dt;
-            if(foamBuf[idx] > 1.5) foamBuf[idx] = 1.5;
-          }
-        }
-
-        // Pass 4: foam evolution (advect + decay + diffuse), with empty-pixel skip
-        const decayMul = Math.exp(-dt * O2.foamDecay);
-        const phaseSpeedRef = 0.8;
-        const driftWorld = phaseSpeedRef * O2.foamDrift;
-        const vx = (driftWorld / pxToWorld_x) * meanDx * dt;
-        const vy = (driftWorld / pxToWorld_y) * meanDy * dt;
-        const diff = O2.foamSpread;
-
-        for(let y=0; y<SH; y++){
-          const ym = y>0?y-1:0, yp = y<SH-1?y+1:SH-1;
-          for(let x=0; x<SW; x++){
-            const xm = x>0?x-1:0, xp = x<SW-1?x+1:SW-1;
-            const idx = y*SW + x;
-            const f_c = foamBuf[idx];
-            const f_n = foamBuf[ym*SW + x];
-            const f_s = foamBuf[yp*SW + x];
-            const f_w = foamBuf[y*SW + xm];
-            const f_e = foamBuf[y*SW + xp];
-            if(f_c < 0.001 && f_n < 0.001 && f_s < 0.001 && f_w < 0.001 && f_e < 0.001){
-              foamNextBuf[idx] = 0;
-              continue;
-            }
-
-            const srcX = x - vx;
-            const srcY = y - vy;
-            const sx0i = Math.floor(srcX);
-            const sy0i = Math.floor(srcY);
-            const sx0 = sx0i<0?0:(sx0i>SW-1?SW-1:sx0i);
-            const sx1 = (sx0+1)>SW-1?SW-1:(sx0+1);
-            const sy0 = sy0i<0?0:(sy0i>SH-1?SH-1:sy0i);
-            const sy1 = (sy0+1)>SH-1?SH-1:(sy0+1);
-            const fx = srcX - sx0i;
-            const fy = srcY - sy0i;
-            const f00 = foamBuf[sy0*SW+sx0], f10 = foamBuf[sy0*SW+sx1];
-            const f01 = foamBuf[sy1*SW+sx0], f11 = foamBuf[sy1*SW+sx1];
-            const adv = lerp(lerp(f00,f10,fx), lerp(f01,f11,fx), fy);
-
-            const blur = (f_n + f_s + f_w + f_e) * 0.25;
-            foamNextBuf[idx] = (adv*(1-diff) + blur*diff) * decayMul;
-          }
-        }
-        const tmp = foamBuf; foamBuf = foamNextBuf; foamNextBuf = tmp;
+        return h*O.amp;
       }
 
       function renderOcean(t){
-        // Step the simulation each frame this is called.
-        stepOcean(t);
+        const worldScale=O.zoom;
+        const aspect=SH/SW;
 
-        const lDir = O2.meanDir + 1.4;
-        const lx = 0.30*Math.cos(lDir), ly = 0.30*Math.sin(lDir), lz = 0.95;
-        const lN = 1/Math.hypot(lx,ly,lz);
-        const lX = lx*lN, lY = ly*lN, lZ = lz*lN;
+        const lx=baseL.x*O.light, ly=baseL.y*O.light, lz=baseL.z;
+        const invL=1/Math.hypot(lx,ly,lz);
+        const lX=lx*invL, lY=ly*invL, lZ=lz*invL;
 
-        let p = 0;
-        for(let y=0; y<SH; y++){
-          const uy = (y/SH - 0.5);
-          for(let x=0; x<SW; x++){
-            const idx = y*SW + x;
-
-            const h  = heightBuf[idx];
-            const hx = gradXBuf[idx], hy = gradYBuf[idx];
-            const slopeMag = Math.sqrt(hx*hx + hy*hy);
-
-            let nx = -hx, ny = -hy, nz = 1;
-            const nN = 1/Math.hypot(nx,ny,nz);
-            nx*=nN; ny*=nN; nz*=nN;
-            const ndotl = clamp01(nx*lX + ny*lY + nz*lZ);
-
-            const hNorm = clamp01(0.5 + h*0.40);
-            let r,g,b;
-            if(hNorm < 0.5){
-              const u = hNorm*2;
-              r = lerp(O2.cDeep[0], O2.cMid[0], u);
-              g = lerp(O2.cDeep[1], O2.cMid[1], u);
-              b = lerp(O2.cDeep[2], O2.cMid[2], u);
-            } else {
-              const u = (hNorm-0.5)*2;
-              r = lerp(O2.cMid[0], O2.cCrest[0], u);
-              g = lerp(O2.cMid[1], O2.cCrest[1], u);
-              b = lerp(O2.cMid[2], O2.cCrest[2], u);
-            }
-
-            const diffuse = 1.0 + O2.faceShade*(ndotl - 0.5);
-            r *= diffuse; g *= diffuse; b *= diffuse;
-
-            const slopeLift = clamp01(slopeMag*1.2) * 0.10;
-            r = lerp(r, O2.cCrest[0]*1.20, slopeLift);
-            g = lerp(g, O2.cCrest[1]*1.20, slopeLift);
-            b = lerp(b, O2.cCrest[2]*1.20, slopeLift);
-
-            const f = foamBuf[idx];
-            const fVisible = smoothstep(O2.foamEdge, O2.foamEdge + 0.5, f);
-            const fBright  = smoothstep(0.45, 1.10, f);
-
-            r = lerp(r, O2.cFoam[0], fVisible);
-            g = lerp(g, O2.cFoam[1], fVisible);
-            b = lerp(b, O2.cFoam[2], fVisible);
-
-            const bloom = fBright * 0.10;
-            r = clamp01(r + bloom);
-            g = clamp01(g + bloom);
-            b = clamp01(b + bloom);
-
-            const ux = (x/SW - 0.5);
-            const vv = clamp01(1 - (ux*ux + uy*uy)*O2.vign);
-            const vfac = 0.84 + 0.16*vv;
-            r *= vfac; g *= vfac; b *= vfac;
-
-            const gr = vnoise(x*0.7 + t*0.1, y*0.7 - t*0.08) * 0.005;
-            r = clamp01(r+gr); g = clamp01(g+gr); b = clamp01(b+gr);
-
-            oceanPix[p++] = (r*255)|0;
-            oceanPix[p++] = (g*255)|0;
-            oceanPix[p++] = (b*255)|0;
-            oceanPix[p++] = 255;
+        let idx=0;
+        for(let y=0;y<SH;y++){
+          const wy=(y/SH-0.5)*worldScale*aspect;
+          for(let x=0;x<SW;x++,idx++){
+            const wx=(x/SW-0.5)*worldScale;
+            oceanHeights[idx]=oceanHeight(wx,wy,t);
           }
         }
-        oceanCtx.putImageData(oceanImg, 0, 0);
+
+        const epsx=worldScale/SW, epsy=(worldScale*aspect)/SH;
+        const inv2epsx=1/(2*epsx), inv2epsy=1/(2*epsy);
+
+        const H_THR=0.095*O.breaks, H_SOFT=0.060;
+        const S_THR=0.075*O.breaks, S_SOFT=0.120;
+
+        let p=0;
+        for(let y=0;y<SH;y++){
+          const y0=y===0?0:y-1, y1=y===SH-1?SH-1:y+1;
+          const uy=(y/SH-0.5);
+          for(let x=0;x<SW;x++){
+            const x0=x===0?0:x-1, x1=x===SW-1?SW-1:x+1;
+            const i=y*SW+x;
+            const h=oceanHeights[i];
+
+            const hx=(oceanHeights[y*SW+x1]-oceanHeights[y*SW+x0])*inv2epsx;
+            const hy=(oceanHeights[y1*SW+x]-oceanHeights[y0*SW+x])*inv2epsy;
+
+            let nx=-hx, ny=-hy, nz=1;
+            const nInv=1/Math.hypot(nx,ny,nz);
+            nx*=nInv; ny*=nInv; nz*=nInv;
+
+            const ndotl=clamp01(nx*lX+ny*lY+nz*lZ);
+            const diffuse=0.28+0.52*ndotl;
+
+            const hm=clamp01(0.50 + h*(2.25*O.depth));
+            const t1=clamp01(hm*1.05);
+
+            let r=lerp(oceanCols.deep0[0],oceanCols.deep1[0],t1);
+            let g=lerp(oceanCols.deep0[1],oceanCols.deep1[1],t1);
+            let b=lerp(oceanCols.deep0[2],oceanCols.deep1[2],t1);
+
+            const t2=clamp01((hm-0.20)/0.90);
+            r=lerp(r, lerp(oceanCols.mid0[0],oceanCols.mid1[0],t2), t2);
+            g=lerp(g, lerp(oceanCols.mid0[1],oceanCols.mid1[1],t2), t2);
+            b=lerp(b, lerp(oceanCols.mid0[2],oceanCols.mid1[2],t2), t2);
+
+            r*=diffuse; g*=diffuse; b*=diffuse;
+
+            const slopeMag=Math.sqrt(hx*hx+hy*hy);
+            const slope=clamp01(slopeMag*1.2);
+            const gl=Math.pow(ndotl,6)*(0.08+0.18*slope)*O.glint;
+
+            r=lerp(r,oceanCols.glint[0],gl);
+            g=lerp(g,oceanCols.glint[1],gl);
+            b=lerp(b,oceanCols.glint[2],gl);
+
+            const foamH=smoothstep(H_THR,H_THR+H_SOFT,h);
+            const foamS=smoothstep(S_THR,S_THR+S_SOFT,slopeMag);
+            let foam=foamH*foamS;
+
+            const wx=(x/SW-0.5), wy=(y/SH-0.5);
+            const adv=t*0.10*O.speed;
+            const edge=vnoise((wx*5.0)+wX*adv, (wy*5.0)+wY*adv);
+            const edgeMask=smoothstep(-0.15,0.55,edge);
+            foam *= (0.55+0.45*edgeMask);
+
+            const adv2=t*0.35*O.speed;
+            const sp=vnoise(wx*22.0+wX*adv2, wy*22.0+wY*adv2);
+            const speck=smoothstep(0.35,0.78,sp);
+            const spray=foam*speck*0.55*O.spray;
+
+            const whitewater=clamp01((foam*0.55+spray)*O.foam);
+
+            r=lerp(r,oceanCols.crest[0],whitewater);
+            g=lerp(g,oceanCols.crest[1],whitewater);
+            b=lerp(b,oceanCols.crest[2],whitewater);
+
+            const bloom=whitewater*(0.06+0.10*ndotl);
+            r=clamp01(r+bloom); g=clamp01(g+bloom); b=clamp01(b+bloom);
+
+            const ux=(x/SW-0.5);
+            const vv=clamp01(1-(ux*ux+uy*uy)*(0.90+0.20*O.vign));
+            const vfac=0.86+0.14*vv;
+            r*=vfac; g*=vfac; b*=vfac;
+
+            const gr=vnoise(x*0.18+t*0.06, y*0.18-t*0.05)*0.008;
+            r=clamp01(r+gr); g=clamp01(g+gr); b=clamp01(b+gr);
+
+            oceanPix[p++]=(r*255)|0;
+            oceanPix[p++]=(g*255)|0;
+            oceanPix[p++]=(b*255)|0;
+            oceanPix[p++]=255;
+          }
+        }
+        oceanCtx.putImageData(oceanImg,0,0);
       }
-
-      // Allocate V2 ocean's extra buffers for current SW/SH.
-      // Called from resize() below.
-      function allocOceanV2Buffers(){
-        const N = SW*SH;
-        foamBuf     = new Float32Array(N);
-        foamNextBuf = new Float32Array(N);
-        heightBuf   = new Float32Array(N);
-        gradXBuf    = new Float32Array(N);
-        gradYBuf    = new Float32Array(N);
-        foldBuf     = new Float32Array(N);
-
-        LSW = (SW >> 1) + 2;
-        LSH = (SH >> 1) + 2;
-        const lN = LSW*LSH;
-        lowH    = new Float32Array(lN);
-        lowHx   = new Float32Array(lN);
-        lowHy   = new Float32Array(lN);
-        lowFold = new Float32Array(lN);
-        lowW    = new Float32Array(lN);
-
-        // Force spectrum rebuild for new sim size
-        _lastSpecSize = -1;
-      }
-
 
       let RD = {...PRESETS.research};
       let rdDirty = true;
@@ -918,6 +587,7 @@
         oceanSim.width=SW; oceanSim.height=SH;
         oceanImg = oceanCtx.createImageData(SW,SH);
         oceanPix = oceanImg.data;
+        oceanHeights = new Float32Array(SW*SH);
 
         rdSim.width=SW; rdSim.height=SH;
         rdImg = rdCtx.createImageData(SW,SH);
@@ -926,9 +596,6 @@
         const N=SW*SH;
         U=new Float32Array(N); V=new Float32Array(N);
         U2=new Float32Array(N); V2=new Float32Array(N);
-
-        // Allocate V2 ocean buffers for the new size
-        allocOceanV2Buffers();
 
         initRDSpacedDots();
         startWarmup(45.0);

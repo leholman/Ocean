@@ -1,0 +1,819 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Drone Ocean — Prototype v2 (Gerstner)</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+    canvas{position:fixed;inset:0;width:100%;height:100%}
+
+    .panel{
+      position:fixed;
+      top:14px; right:14px;
+      width:310px;
+      max-height:calc(100vh - 28px);
+      overflow-y:auto;
+      background:rgba(0,0,0,0.78);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      color:#fff;
+      padding:14px 16px 16px;
+      border-radius:8px;
+      font-size:11px;
+      letter-spacing:0.02em;
+      z-index:10;
+      box-shadow:0 8px 30px rgba(0,0,0,.5);
+    }
+    .panel h2{
+      margin:0 0 8px;
+      font-size:11px;
+      font-weight:600;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.55);
+    }
+    .panel h3{
+      margin:14px 0 6px;
+      font-size:10px;
+      font-weight:600;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      color:rgba(180,210,255,.7);
+      border-top:1px solid rgba(255,255,255,.1);
+      padding-top:10px;
+    }
+    .panel h3:first-of-type{ border-top:none; padding-top:0; }
+    .row{ display:flex; align-items:center; gap:8px; margin:5px 0; }
+    .row label{ flex:0 0 100px; color:rgba(255,255,255,.78); font-size:11px; }
+    .row input[type=range]{ flex:1; accent-color:#7cc5ff; height:14px; }
+    .row .val{ flex:0 0 46px; text-align:right; font-variant-numeric:tabular-nums; color:rgba(150,200,255,.95); font-size:10px; }
+    .row.swatch input[type=color]{ flex:1; height:22px; background:transparent; border:1px solid rgba(255,255,255,.15); border-radius:4px; padding:1px; }
+    .hud{
+      position:fixed;
+      bottom:14px; left:14px;
+      font:10px/1.4 "SF Mono",Menlo,monospace;
+      color:rgba(255,255,255,.45);
+      pointer-events:none;
+      letter-spacing:.04em;
+    }
+    button.reset{
+      width:100%;
+      margin-top:12px;
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.15);
+      padding:6px;
+      font:inherit;
+      font-size:10px;
+      letter-spacing:0.1em;
+      text-transform:uppercase;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    button.reset:hover{ background:rgba(255,255,255,.15); }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hud" id="hud">drone ocean v2</div>
+
+  <div class="panel" id="panel">
+    <h2>Drone Ocean v2 — Gerstner</h2>
+
+    <h3>Spectrum</h3>
+    <div class="row"><label>amplitude</label><input type="range" id="amp" min="0.1" max="2.5" step="0.05" value="0.85"><span class="val" id="amp_v"></span></div>
+    <div class="row"><label>peak λ</label><input type="range" id="peakLambda" min="0.4" max="6" step="0.05" value="1.6"><span class="val" id="peakLambda_v"></span></div>
+    <div class="row"><label>spectrum width</label><input type="range" id="specWidth" min="0.2" max="2.0" step="0.05" value="0.9"><span class="val" id="specWidth_v"></span></div>
+    <div class="row"><label>direction</label><input type="range" id="meanDir" min="-3.14159" max="3.14159" step="0.02" value="0.20"><span class="val" id="meanDir_v"></span></div>
+    <div class="row"><label>dir spread</label><input type="range" id="dirSpread" min="0.0" max="1.5" step="0.02" value="0.35"><span class="val" id="dirSpread_v"></span></div>
+    <div class="row"><label>Q (steepness)</label><input type="range" id="Q" min="0" max="1.4" step="0.02" value="0.85"><span class="val" id="Q_v"></span></div>
+    <div class="row"><label>shape exp</label><input type="range" id="shapeK" min="1" max="6" step="0.1" value="2.0"><span class="val" id="shapeK_v"></span></div>
+    <div class="row"><label>world zoom</label><input type="range" id="zoom" min="1.0" max="6.0" step="0.1" value="2.6"><span class="val" id="zoom_v"></span></div>
+    <div class="row"><label>time scale</label><input type="range" id="timeScale" min="0.1" max="2.5" step="0.05" value="0.65"><span class="val" id="timeScale_v"></span></div>
+
+    <h3>Breaking & Foam</h3>
+    <div class="row"><label>fold thresh</label><input type="range" id="foldThr" min="0" max="1" step="0.02" value="0.10"><span class="val" id="foldThr_v"></span></div>
+    <div class="row"><label>fold gain</label><input type="range" id="foldGain" min="0.5" max="20" step="0.2" value="6.0"><span class="val" id="foldGain_v"></span></div>
+    <div class="row"><label>break patch sz</label><input type="range" id="patchSize" min="0.2" max="3.0" step="0.05" value="0.70"><span class="val" id="patchSize_v"></span></div>
+    <div class="row"><label>patch threshold</label><input type="range" id="patchThr" min="-0.5" max="0.6" step="0.02" value="-0.10"><span class="val" id="patchThr_v"></span></div>
+    <div class="row"><label>foam decay</label><input type="range" id="foamDecay" min="0.05" max="2.0" step="0.02" value="0.40"><span class="val" id="foamDecay_v"></span></div>
+    <div class="row"><label>foam spread</label><input type="range" id="foamSpread" min="0" max="0.4" step="0.01" value="0.10"><span class="val" id="foamSpread_v"></span></div>
+    <div class="row"><label>foam drift</label><input type="range" id="foamDrift" min="0" max="2.0" step="0.05" value="0.35"><span class="val" id="foamDrift_v"></span></div>
+
+    <h3>Color & Light</h3>
+    <div class="row swatch"><label>deep</label><input type="color" id="cDeep" value="#04141f"></div>
+    <div class="row swatch"><label>mid</label><input type="color" id="cMid"  value="#0a3550"></div>
+    <div class="row swatch"><label>crest</label><input type="color" id="cCrest" value="#2a78a8"></div>
+    <div class="row swatch"><label>foam</label><input type="color" id="cFoam" value="#f5fbff"></div>
+    <div class="row"><label>face shade</label><input type="range" id="faceShade" min="0" max="2" step="0.05" value="0.70"><span class="val" id="faceShade_v"></span></div>
+    <div class="row"><label>foam edge</label><input type="range" id="foamEdge" min="0" max="0.6" step="0.01" value="0.05"><span class="val" id="foamEdge_v"></span></div>
+    <div class="row"><label>vignette</label><input type="range" id="vign" min="0" max="2" step="0.05" value="0.85"><span class="val" id="vign_v"></span></div>
+
+    <button class="reset" id="reset">Reset to defaults</button>
+  </div>
+
+  <script>
+  (function(){
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+
+    // Sim resolution: 260 like V1.
+    const SIM_MAX = 260;
+    let W=0, H=0, SW=0, SH=0;
+
+    const sim = document.createElement('canvas');
+    const sctx = sim.getContext('2d', { alpha:false, willReadFrequently:true });
+    let img=null, pix=null;
+    let foam=null, foamNext=null;
+
+    // Sim-resolution buffers (upsampled from low-res Gerstner output)
+    let heightBuf=null, gradXBuf=null, gradYBuf=null, foldBuf=null;
+
+    // Low-res target buffers (where we splat Gerstner samples).
+    // Half-res in each axis, plus a 1-pixel pad for safe bilinear sampling.
+    let LSW=0, LSH=0;
+    let lowH=null, lowHx=null, lowHy=null, lowFold=null, lowW=null;
+
+    // ---------- Params ----------
+    const P = {
+      amp:0.85, peakLambda:1.6, specWidth:0.9,
+      meanDir:0.20, dirSpread:0.35,
+      Q:0.85, shapeK:2.0,
+      zoom:2.6, timeScale:0.65,
+
+      foldThr:0.10, foldGain:6.0,
+      patchSize:0.70, patchThr:-0.10,
+      foamDecay:0.40, foamSpread:0.10, foamDrift:0.35,
+
+      cDeep:[0.016,0.078,0.122],
+      cMid:[0.039,0.208,0.314],
+      cCrest:[0.165,0.471,0.659],
+      cFoam:[0.961,0.984,1.000],
+
+      faceShade:0.70, foamEdge:0.05, vign:0.85
+    };
+
+    function hexToRgb(h){
+      const v = parseInt(h.slice(1), 16);
+      return [((v>>16)&255)/255, ((v>>8)&255)/255, (v&255)/255];
+    }
+    function rgbToHex(r,g,b){
+      const c = v => Math.max(0,Math.min(255,(v*255)|0)).toString(16).padStart(2,'0');
+      return '#' + c(r) + c(g) + c(b);
+    }
+
+    // ---------- Spectrum (flat arrays for hot loop) ----------
+    const N_COMPONENTS = 12;
+    let comp_k     = new Float32Array(N_COMPONENTS);
+    let comp_dx    = new Float32Array(N_COMPONENTS);
+    let comp_dy    = new Float32Array(N_COMPONENTS);
+    let comp_a     = new Float32Array(N_COMPONENTS);
+    let comp_omega = new Float32Array(N_COMPONENTS);
+    let comp_phase = new Float32Array(N_COMPONENTS);
+    // Per-frame trig caches for (omega*t - phase)
+    let comp_sinB = new Float32Array(N_COMPONENTS);
+    let comp_cosB = new Float32Array(N_COMPONENTS);
+    // Pre-multiplied k * direction (for spatial phase)
+    let comp_kdx = new Float32Array(N_COMPONENTS);
+    let comp_kdy = new Float32Array(N_COMPONENTS);
+    // Q_i amplitude for horizontal displacement: Q / (k * A * N) per Gerstner paper.
+    // We store the per-component contribution Q_i * A_i = Q / (k * N) (multiplied by A later).
+    let comp_qa    = new Float32Array(N_COMPONENTS);
+    // Whether this component is enabled (Nyquist filtering can disable some)
+    let comp_active = new Uint8Array(N_COMPONENTS);
+    // Number of currently-active components (for normalizing)
+    let nActive = N_COMPONENTS;
+
+    let _lastPeak=null, _lastWidth=null, _lastDir=null, _lastSpread=null, _lastQ=null;
+
+    function hash01(i){
+      let n = (i*374761393 + 668265263)|0;
+      n ^= (n>>>13);
+      n = (n*1274126177)|0;
+      n ^= (n>>>16);
+      return (n>>>0)/4294967296;
+    }
+
+    // The Nyquist limit depends on sim resolution, so this gets called on resize too.
+    // Components with wavelength < 4 × world-pixel-size are disabled to avoid aliasing.
+    let _lastSimSize = -1;
+    function rebuildSpectrumIfNeeded(){
+      const simChanged = (_lastSimSize !== SW);
+      if(!simChanged &&
+         _lastPeak===P.peakLambda && _lastWidth===P.specWidth &&
+         _lastDir===P.meanDir && _lastSpread===P.dirSpread &&
+         _lastQ===P.Q) return;
+
+      _lastPeak=P.peakLambda; _lastWidth=P.specWidth;
+      _lastDir=P.meanDir; _lastSpread=P.dirSpread;
+      _lastQ=P.Q;
+      _lastSimSize = SW;
+
+      const kPeak = (2*Math.PI) / P.peakLambda;
+      const kMin = kPeak / (1 + P.specWidth);
+      const kMax = kPeak * (1 + P.specWidth);
+      let totalEnergy = 0;
+
+      // Nyquist: a component's wavelength must be at least ~4 source-grid pixels.
+      // Source-grid pixel spacing in world units = P.zoom / SOURCE_W (set later).
+      // Conservative minimum wavelength; we'll still disable on the fly during the splat pass.
+      const minLambdaNyquist = (P.zoom / SW) * 4;
+
+      let active = 0;
+      for(let i=0; i<N_COMPONENTS; i++){
+        const u = (i + 0.5)/N_COMPONENTS;
+        const jitter = (hash01(i*7+1) - 0.5) * (1/N_COMPONENTS);
+        const kFrac = u + jitter;
+        const k = kMin * Math.pow(kMax/kMin, kFrac);
+        const lambda = (2*Math.PI)/k;
+
+        const angleOff = (hash01(i*11+3) - 0.5) * P.dirSpread * 4;
+        const dir = P.meanDir + angleOff;
+
+        const r = k / kPeak;
+        const energy = Math.exp(-Math.pow((r-1)/P.specWidth, 2) * 0.8) / (k*k);
+        const a = Math.sqrt(energy);
+
+        const cosA = Math.cos(angleOff);
+        const dirW = Math.max(0, cosA*cosA);
+        const finalA = a * Math.sqrt(dirW + 0.05);
+
+        const isActive = (lambda >= minLambdaNyquist) ? 1 : 0;
+        comp_active[i] = isActive;
+        if(isActive) active++;
+
+        totalEnergy += isActive * finalA*finalA;
+
+        comp_k[i] = k;
+        comp_dx[i] = Math.cos(dir);
+        comp_dy[i] = Math.sin(dir);
+        comp_a[i] = finalA;
+        comp_omega[i] = Math.sqrt(k);
+        comp_phase[i] = hash01(i*17+5) * Math.PI * 2;
+      }
+      nActive = Math.max(1, active);
+
+      const norm = 1 / Math.sqrt(totalEnergy + 1e-6);
+      for(let i=0; i<N_COMPONENTS; i++){
+        comp_a[i] *= norm;
+        comp_kdx[i] = comp_k[i] * comp_dx[i];
+        comp_kdy[i] = comp_k[i] * comp_dy[i];
+        // Gerstner Q_i for component i: Q / (k_i * A_i * N) ensures that when Q=1,
+        // the sum Σ Q_i * k_i * A_i = 1 exactly (the breaking threshold).
+        // But we want the FINAL amplitude product Q_i * A_i, which simplifies to Q/(k_i * N).
+        comp_qa[i] = P.Q / (comp_k[i] * nActive);
+      }
+    }
+
+    // ---------- Slider wiring ----------
+    function bindRange(id, key, fmt){
+      const el = document.getElementById(id);
+      const lab = document.getElementById(id+'_v');
+      el.value = P[key];
+      lab.textContent = fmt ? fmt(P[key]) : (+P[key]).toFixed(2);
+      el.addEventListener('input', () => {
+        P[key] = parseFloat(el.value);
+        lab.textContent = fmt ? fmt(P[key]) : (+P[key]).toFixed(2);
+      });
+    }
+    function bindColor(id, key){
+      const el = document.getElementById(id);
+      el.value = rgbToHex(...P[key]);
+      el.addEventListener('input', () => { P[key] = hexToRgb(el.value); });
+    }
+
+    bindRange('amp','amp');
+    bindRange('peakLambda','peakLambda', v=>v.toFixed(2));
+    bindRange('specWidth','specWidth');
+    bindRange('meanDir','meanDir', v=>v.toFixed(2));
+    bindRange('dirSpread','dirSpread');
+    bindRange('Q','Q');
+    bindRange('shapeK','shapeK', v=>v.toFixed(1));
+    bindRange('zoom','zoom');
+    bindRange('timeScale','timeScale');
+    bindRange('foldThr','foldThr');
+    bindRange('foldGain','foldGain', v=>v.toFixed(1));
+    bindRange('patchSize','patchSize');
+    bindRange('patchThr','patchThr');
+    bindRange('foamDecay','foamDecay');
+    bindRange('foamSpread','foamSpread');
+    bindRange('foamDrift','foamDrift');
+    bindRange('faceShade','faceShade');
+    bindRange('foamEdge','foamEdge');
+    bindRange('vign','vign');
+    bindColor('cDeep','cDeep');
+    bindColor('cMid','cMid');
+    bindColor('cCrest','cCrest');
+    bindColor('cFoam','cFoam');
+
+    document.getElementById('reset').addEventListener('click', () => location.reload());
+
+    // ---------- Math helpers ----------
+    function clamp01(v){ return v<0?0:(v>1?1:v); }
+    function lerp(a,b,t){ return a+(b-a)*t; }
+    function smoothstep(a,b,x){
+      const t = clamp01((x-a)/(b-a));
+      return t*t*(3-2*t);
+    }
+    function hash2(x, y){
+      x |= 0; y |= 0;
+      let n = (x*374761393 + y*668265263)|0;
+      n ^= (n>>>13);
+      n = (n*1274126177)|0;
+      n ^= (n>>>16);
+      return (n>>>0)/4294967296;
+    }
+    function vnoise(x, y){
+      const xi = Math.floor(x), yi = Math.floor(y);
+      const xf = x-xi, yf = y-yi;
+      const u = xf*xf*(3-2*xf);
+      const v = yf*yf*(3-2*yf);
+      const a = hash2(xi,yi), b = hash2(xi+1,yi);
+      const c = hash2(xi,yi+1), d = hash2(xi+1,yi+1);
+      const ab = a+(b-a)*u, cd = c+(d-c)*u;
+      return ((ab+(cd-ab)*v)*2 - 1);
+    }
+
+    // ---------- Cache temporal trig per frame ----------
+    function cacheTemporalTrig(t){
+      const tt = t * P.timeScale;
+      for(let i=0; i<N_COMPONENTS; i++){
+        if(!comp_active[i]) continue;
+        const B = comp_omega[i]*tt - comp_phase[i];
+        comp_sinB[i] = Math.sin(B);
+        comp_cosB[i] = Math.cos(B);
+      }
+    }
+
+    // ---------- Gerstner evaluation ----------
+    // Given undisplaced (wx, wy) and time, produce:
+    //   wx2, wy2 → displaced world position
+    //   h        → height at this surface point
+    //   hx, hy   → ∂h/∂x, ∂h/∂y in undisplaced coords
+    //   J        → Jacobian determinant of the displacement map
+    //              (1 + ∂Δx/∂x)(1 + ∂Δy/∂y) − (∂Δx/∂y)(∂Δy/∂x)
+    //              When J approaches 0 or goes negative, the wave is folding → break.
+    //
+    // Wave shape: instead of plain sin, use ((sin+1)/2)^k * 2 - 1 sharpened wave,
+    // controlled by P.shapeK. shapeK=1 → plain cos for height; higher = sharper crests.
+    //
+    // For a single Gerstner wave with horizontal displacement Δ = -Q*A*D*sin(phase),
+    // and vertical displacement A*cos(phase) [note: paper uses cos for h, sin for Δ
+    // but the convention is interchangeable; we use cos for consistency with the
+    // shape function being `((cos+1)/2)^k`].
+    //
+    // We use the shape function for HEIGHT only. Horizontal displacement uses plain sin.
+    // This keeps the math tractable while still giving sharp crests visually.
+
+    const _out = { wx2:0, wy2:0, h:0, hx:0, hy:0, J:0 };
+
+    function evalGerstner(wx, wy, out){
+      let dx_disp = 0, dy_disp = 0;       // total horizontal displacement
+      let dDx_dx = 0, dDx_dy = 0;          // partials of Δx
+      let dDy_dx = 0, dDy_dy = 0;          // partials of Δy
+
+      // Height as sum of shaped waves: h = Σ a_i * shape(phase_i)
+      // shape(φ) = ((cos(φ)+1)/2)^k  in [0,1], rescaled to [-1,1]: shape*2-1
+      // dShape/dφ = k * ((cos+1)/2)^(k-1) * (-sin/2)
+      //
+      // So d_height_dx = sum a_i * dShape/dφ_i * (∂φ_i/∂x)
+      // where ∂φ_i/∂x = comp_kdx[i]
+      // We accumulate hx, hy directly.
+
+      let h = 0, hx = 0, hy = 0;
+
+      const k_exp = P.shapeK;
+
+      for(let i=0; i<N_COMPONENTS; i++){
+        if(!comp_active[i]) continue;
+        // Phase = comp_kdx*wx + comp_kdy*wy − B
+        // Use angle-sum: cos(theta - B) and sin(theta - B)
+        const theta = comp_kdx[i]*wx + comp_kdy[i]*wy;
+        const sT = Math.sin(theta), cT = Math.cos(theta);
+        const cP = cT*comp_cosB[i] + sT*comp_sinB[i];   // cos(theta - B)
+        const sP = sT*comp_cosB[i] - cT*comp_sinB[i];   // sin(theta - B)
+
+        // --- Vertical (height) using shaped wave ---
+        // base = (cos(phase)+1)/2
+        const base = 0.5*(cP + 1);
+        // shaped = base^k_exp; shape result in [0,1]
+        const shaped = Math.pow(base, k_exp);
+        // Scale to [-1, 1] for height (so height has zero mean to within precision)
+        const shapedCentered = shaped*2 - 1;
+        h += comp_a[i] * shapedCentered;
+
+        // d shape / d phase = k_exp * base^(k_exp-1) * (-sin/2)
+        // d shape_centered / d phase = k_exp * base^(k_exp-1) * (-sin)
+        // base^(k_exp-1) = shaped / max(base, eps)
+        const dShape_dphase = k_exp * (shaped / Math.max(base, 1e-4)) * (-sP);
+        // Multiply by A_i and propagate to (∂h/∂x, ∂h/∂y) via ∂phase/∂(x,y) = (kdx, kdy)
+        const dh_factor = comp_a[i] * dShape_dphase;
+        hx += dh_factor * comp_kdx[i];
+        hy += dh_factor * comp_kdy[i];
+
+        // --- Horizontal Gerstner displacement ---
+        // Δx_i = -qa_i * D.x * sin(phase)
+        // Δy_i = -qa_i * D.y * sin(phase)
+        // (the negative sign pulls vertices TOWARD the crest, sharpening it)
+        const qa = comp_qa[i];
+        dx_disp += -qa * comp_dx[i] * sP;
+        dy_disp += -qa * comp_dy[i] * sP;
+
+        // Partials: ∂Δx/∂x = -qa * D.x * cos(phase) * comp_kdx
+        const cosPhi_qa = -qa * cP;
+        dDx_dx += cosPhi_qa * comp_dx[i] * comp_kdx[i];
+        dDx_dy += cosPhi_qa * comp_dx[i] * comp_kdy[i];
+        dDy_dx += cosPhi_qa * comp_dy[i] * comp_kdx[i];
+        dDy_dy += cosPhi_qa * comp_dy[i] * comp_kdy[i];
+      }
+
+      const A = P.amp;
+      out.h  = h * A;
+      out.hx = hx * A;
+      out.hy = hy * A;
+
+      // Apply user amplitude to horizontal displacement too — keep wave geometry consistent
+      out.wx2 = wx + dx_disp * A;
+      out.wy2 = wy + dy_disp * A;
+
+      // Jacobian determinant of the (x,y) -> (wx2, wy2) map.
+      // M = [[1 + A*dDx_dx, A*dDx_dy], [A*dDy_dx, 1 + A*dDy_dy]]
+      // det = (1 + A*dDx_dx)(1 + A*dDy_dy) − A^2 * dDx_dy * dDy_dx
+      const m00 = 1 + A*dDx_dx;
+      const m11 = 1 + A*dDy_dy;
+      out.J = m00*m11 - A*A*dDx_dy*dDy_dx;
+    }
+
+    // ---------- Step ----------
+    let lastT = 0;
+    function step(t){
+      let dt = t - lastT;
+      if(dt < 0) dt = 0;
+      if(dt > 0.05) dt = 0.05;
+      lastT = t;
+
+      rebuildSpectrumIfNeeded();
+      cacheTemporalTrig(t);
+
+      const aspect = SH/SW;
+      const Z = P.zoom;
+      const meanDx = Math.cos(P.meanDir), meanDy = Math.sin(P.meanDir);
+
+      const pxToWorld_x = Z / SW;
+      const pxToWorld_y = (Z*aspect) / SH;
+
+      // ---- Pass 1: forward-splat Gerstner samples into low-res buffers ----
+      //
+      // We iterate over an UNDISPLACED source grid that covers the visible world
+      // domain plus a small margin (so waves displaced inward don't leave gaps at
+      // the edges of the screen). Source density is 1.5× the low-res target density
+      // so splats overlap and there are no holes.
+      lowH.fill(0); lowHx.fill(0); lowHy.fill(0); lowFold.fill(0); lowW.fill(0);
+
+      const SRC_DENSITY = 1.5;
+      const sourceW = (LSW * SRC_DENSITY)|0;
+      const sourceH = (LSH * SRC_DENSITY)|0;
+      const margin = Z * 0.10;       // 10% margin on each side
+
+      const srcStep_x = (Z + 2*margin) / sourceW;
+      const srcStep_y = (Z*aspect + 2*margin) / sourceH;
+      // World coordinate for source node (sx, sy):
+      const srcWx0 = -Z*0.5 - margin;
+      const srcWy0 = -Z*aspect*0.5 - margin;
+
+      // Mapping from world coord to low-res target pixel (lx, ly).
+      // Low-res target covers: world x in [-Z/2, Z/2], y in [-Z*aspect/2, Z*aspect/2]
+      // with pad lx=0 corresponding to wx = -Z/2 - lowStep, lx=LSW-1 to wx = Z/2 + lowStep.
+      const lowStep_x = Z / (LSW - 2);
+      const lowStep_y = (Z*aspect) / (LSH - 2);
+      const inv_lowStep_x = 1/lowStep_x;
+      const inv_lowStep_y = 1/lowStep_y;
+      // lowX = (wx + Z/2)/lowStep_x + 1
+      const lowX0 = Z*0.5*inv_lowStep_x + 1;
+      const lowY0 = Z*aspect*0.5*inv_lowStep_y + 1;
+
+      let _maxH = 0, _minJ = Infinity, _foldedSamples = 0;
+
+      for(let sy = 0; sy < sourceH; sy++){
+        const wy = srcWy0 + (sy + 0.5)*srcStep_y;
+        for(let sx = 0; sx < sourceW; sx++){
+          const wx = srcWx0 + (sx + 0.5)*srcStep_x;
+          evalGerstner(wx, wy, _out);
+
+          if(_out.h > _maxH) _maxH = _out.h;
+          if(_out.J < _minJ) _minJ = _out.J;
+          // foldAmount: 0 when J >= 1 (no compression), grows as J shrinks/inverts
+          const foldAmount = Math.max(0, 1 - _out.J);
+          if(foldAmount > 0.5) _foldedSamples++;
+
+          // Convert displaced world position to low-res target pixel coords
+          const lxF = _out.wx2 * inv_lowStep_x + lowX0;
+          const lyF = _out.wy2 * inv_lowStep_y + lowY0;
+          const lx0 = lxF | 0;
+          const ly0 = lyF | 0;
+          if(lx0 < 0 || lx0 >= LSW-1 || ly0 < 0 || ly0 >= LSH-1) continue;
+          const fx = lxF - lx0;
+          const fy = lyF - ly0;
+
+          // Bilinear weights for splat
+          const w00 = (1-fx)*(1-fy);
+          const w10 = fx*(1-fy);
+          const w01 = (1-fx)*fy;
+          const w11 = fx*fy;
+
+          const i00 = ly0*LSW + lx0;
+          const i10 = i00 + 1;
+          const i01 = i00 + LSW;
+          const i11 = i01 + 1;
+
+          // Accumulate weighted sums
+          lowH[i00]   += _out.h * w00;
+          lowH[i10]   += _out.h * w10;
+          lowH[i01]   += _out.h * w01;
+          lowH[i11]   += _out.h * w11;
+
+          lowHx[i00]  += _out.hx * w00;
+          lowHx[i10]  += _out.hx * w10;
+          lowHx[i01]  += _out.hx * w01;
+          lowHx[i11]  += _out.hx * w11;
+
+          lowHy[i00]  += _out.hy * w00;
+          lowHy[i10]  += _out.hy * w10;
+          lowHy[i01]  += _out.hy * w01;
+          lowHy[i11]  += _out.hy * w11;
+
+          lowFold[i00] += foldAmount * w00;
+          lowFold[i10] += foldAmount * w10;
+          lowFold[i01] += foldAmount * w01;
+          lowFold[i11] += foldAmount * w11;
+
+          lowW[i00]   += w00;
+          lowW[i10]   += w10;
+          lowW[i01]   += w01;
+          lowW[i11]   += w11;
+        }
+      }
+
+      // Normalize accumulated buffers by accumulated weight
+      const lN = LSW*LSH;
+      for(let i=0; i<lN; i++){
+        const w = lowW[i];
+        if(w > 1e-4){
+          const inv = 1/w;
+          lowH[i]    *= inv;
+          lowHx[i]   *= inv;
+          lowHy[i]   *= inv;
+          lowFold[i] *= inv;
+        }
+      }
+
+      // ---- Pass 2: bilinear upsample low-res → sim-res buffers ----
+      {
+        let i = 0;
+        for(let y=0; y<SH; y++){
+          const lyF = y*0.5 + 0.75;
+          const ly0 = lyF|0;
+          const fy = lyF - ly0;
+          const ly1 = ly0 + 1;
+          const row0 = ly0*LSW;
+          const row1 = ly1*LSW;
+          for(let x=0; x<SW; x++, i++){
+            const lxF = x*0.5 + 0.75;
+            const lx0 = lxF|0;
+            const fx = lxF - lx0;
+            const lx1 = lx0 + 1;
+
+            const i00 = row0+lx0, i10 = row0+lx1;
+            const i01 = row1+lx0, i11 = row1+lx1;
+            const oneMfx = 1-fx, oneMfy = 1-fy;
+            const w00 = oneMfx*oneMfy, w10 = fx*oneMfy;
+            const w01 = oneMfx*fy,     w11 = fx*fy;
+
+            heightBuf[i] = lowH[i00]*w00 + lowH[i10]*w10 + lowH[i01]*w01 + lowH[i11]*w11;
+            gradXBuf[i]  = lowHx[i00]*w00 + lowHx[i10]*w10 + lowHx[i01]*w01 + lowHx[i11]*w11;
+            gradYBuf[i]  = lowHy[i00]*w00 + lowHy[i10]*w10 + lowHy[i01]*w01 + lowHy[i11]*w11;
+            foldBuf[i]   = lowFold[i00]*w00 + lowFold[i10]*w10 + lowFold[i01]*w01 + lowFold[i11]*w11;
+          }
+        }
+      }
+
+      // ---- Pass 3: deposit foam where the surface folds, gated by patch noise ----
+      const advAdv = t*0.04;
+      const patchScale = 1.0 / Math.max(0.05, P.patchSize);
+      let _breakPx = 0;
+
+      for(let y=0; y<SH; y++){
+        for(let x=0; x<SW; x++){
+          const idx = y*SW + x;
+          const fold = foldBuf[idx];
+          if(fold < P.foldThr) continue;
+
+          const wx = (x/SW - 0.5)*Z;
+          const wy = (y/SH - 0.5)*Z*aspect;
+          const pa = vnoise(wx*patchScale + meanDx*advAdv, wy*patchScale + meanDy*advAdv);
+          const pb = vnoise(wx*patchScale*2 - meanDx*advAdv*0.5, wy*patchScale*2 - meanDy*advAdv*0.5)*0.5;
+          const patch = (pa + pb)*0.6;
+          const patchFactor = smoothstep(P.patchThr, P.patchThr+0.3, patch);
+          if(patchFactor <= 0) continue;
+
+          // Foam deposit ∝ how strongly we're past the fold threshold
+          const B = (fold - P.foldThr) * patchFactor;
+          foam[idx] += B * P.foldGain * dt;
+          if(foam[idx] > 1.5) foam[idx] = 1.5;
+          _breakPx++;
+        }
+      }
+
+      // ---- Pass 4: foam evolution (advect + decay + diffuse), with empty-pixel skip ----
+      const decayMul = Math.exp(-dt * P.foamDecay);
+      const phaseSpeedRef = 0.8;
+      const driftWorld = phaseSpeedRef * P.foamDrift;
+      const vx = (driftWorld / pxToWorld_x) * meanDx * dt;
+      const vy = (driftWorld / pxToWorld_y) * meanDy * dt;
+      const diff = P.foamSpread;
+
+      for(let y=0; y<SH; y++){
+        const ym = y>0?y-1:0, yp = y<SH-1?y+1:SH-1;
+        for(let x=0; x<SW; x++){
+          const xm = x>0?x-1:0, xp = x<SW-1?x+1:SW-1;
+          const idx = y*SW + x;
+          const f_c = foam[idx];
+          const f_n = foam[ym*SW + x];
+          const f_s = foam[yp*SW + x];
+          const f_w = foam[y*SW + xm];
+          const f_e = foam[y*SW + xp];
+          if(f_c < 0.001 && f_n < 0.001 && f_s < 0.001 && f_w < 0.001 && f_e < 0.001){
+            foamNext[idx] = 0;
+            continue;
+          }
+
+          const srcX = x - vx;
+          const srcY = y - vy;
+          const sx0i = Math.floor(srcX);
+          const sy0i = Math.floor(srcY);
+          const sx0 = sx0i<0?0:(sx0i>SW-1?SW-1:sx0i);
+          const sx1 = (sx0+1)>SW-1?SW-1:(sx0+1);
+          const sy0 = sy0i<0?0:(sy0i>SH-1?SH-1:sy0i);
+          const sy1 = (sy0+1)>SH-1?SH-1:(sy0+1);
+          const fx = srcX - sx0i;
+          const fy = srcY - sy0i;
+          const f00 = foam[sy0*SW+sx0], f10 = foam[sy0*SW+sx1];
+          const f01 = foam[sy1*SW+sx0], f11 = foam[sy1*SW+sx1];
+          const adv = lerp(lerp(f00,f10,fx), lerp(f01,f11,fx), fy);
+
+          const blur = (f_n + f_s + f_w + f_e) * 0.25;
+          foamNext[idx] = (adv*(1-diff) + blur*diff) * decayMul;
+        }
+      }
+      const tmp = foam; foam = foamNext; foamNext = tmp;
+
+      window.__diag = { dt, breakPx:_breakPx, foldedSamples:_foldedSamples,
+                        maxH:_maxH.toFixed(2), minJ:_minJ.toFixed(2),
+                        nActive, SW, SH };
+    }
+
+    // ---------- Render ----------
+    function render(t){
+      const lDir = P.meanDir + 1.4;
+      const lx = 0.30*Math.cos(lDir), ly = 0.30*Math.sin(lDir), lz = 0.95;
+      const lN = 1/Math.hypot(lx,ly,lz);
+      const lX = lx*lN, lY = ly*lN, lZ = lz*lN;
+
+      let p = 0, foamSum=0, foamMax=0;
+      for(let y=0; y<SH; y++){
+        const uy = (y/SH - 0.5);
+        for(let x=0; x<SW; x++){
+          const idx = y*SW + x;
+
+          const h  = heightBuf[idx];
+          const hx = gradXBuf[idx], hy = gradYBuf[idx];
+          const slopeMag = Math.sqrt(hx*hx + hy*hy);
+
+          let nx = -hx, ny = -hy, nz = 1;
+          const nN = 1/Math.hypot(nx,ny,nz);
+          nx*=nN; ny*=nN; nz*=nN;
+          const ndotl = clamp01(nx*lX + ny*lY + nz*lZ);
+
+          const hNorm = clamp01(0.5 + h*0.40);
+          let r,g,b;
+          if(hNorm < 0.5){
+            const u = hNorm*2;
+            r = lerp(P.cDeep[0], P.cMid[0], u);
+            g = lerp(P.cDeep[1], P.cMid[1], u);
+            b = lerp(P.cDeep[2], P.cMid[2], u);
+          } else {
+            const u = (hNorm-0.5)*2;
+            r = lerp(P.cMid[0], P.cCrest[0], u);
+            g = lerp(P.cMid[1], P.cCrest[1], u);
+            b = lerp(P.cMid[2], P.cCrest[2], u);
+          }
+
+          const diffuse = 1.0 + P.faceShade*(ndotl - 0.5);
+          r *= diffuse; g *= diffuse; b *= diffuse;
+
+          const slopeLift = clamp01(slopeMag*1.2) * 0.10;
+          r = lerp(r, P.cCrest[0]*1.20, slopeLift);
+          g = lerp(g, P.cCrest[1]*1.20, slopeLift);
+          b = lerp(b, P.cCrest[2]*1.20, slopeLift);
+
+          const f = foam[idx];
+          if(f > foamMax) foamMax = f;
+          foamSum += f;
+          const fVisible = smoothstep(P.foamEdge, P.foamEdge + 0.5, f);
+          const fBright  = smoothstep(0.45, 1.10, f);
+
+          r = lerp(r, P.cFoam[0], fVisible);
+          g = lerp(g, P.cFoam[1], fVisible);
+          b = lerp(b, P.cFoam[2], fVisible);
+
+          const bloom = fBright * 0.10;
+          r = clamp01(r + bloom);
+          g = clamp01(g + bloom);
+          b = clamp01(b + bloom);
+
+          const ux = (x/SW - 0.5);
+          const vv = clamp01(1 - (ux*ux + uy*uy)*P.vign);
+          const vfac = 0.84 + 0.16*vv;
+          r *= vfac; g *= vfac; b *= vfac;
+
+          const gr = vnoise(x*0.7 + t*0.1, y*0.7 - t*0.08) * 0.005;
+          r = clamp01(r+gr); g = clamp01(g+gr); b = clamp01(b+gr);
+
+          pix[p++] = (r*255)|0;
+          pix[p++] = (g*255)|0;
+          pix[p++] = (b*255)|0;
+          pix[p++] = 255;
+        }
+      }
+      sctx.putImageData(img, 0, 0);
+
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(sim, 0, 0, W, H);
+
+      if(window.__diag){
+        window.__diag.foamSum = foamSum.toFixed(0);
+        window.__diag.foamMax = foamMax.toFixed(2);
+      }
+    }
+
+    // ---------- Resize ----------
+    function resize(){
+      W = innerWidth; H = innerHeight;
+      canvas.width = W; canvas.height = H;
+      const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H)*0.55)));
+      if(W>=H){ SH = maxDim; SW = Math.floor(maxDim*(W/H)); }
+      else    { SW = maxDim; SH = Math.floor(maxDim*(H/W)); }
+      SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+      SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+      sim.width = SW; sim.height = SH;
+      img = sctx.createImageData(SW,SH);
+      pix = img.data;
+
+      const N = SW*SH;
+      foam = new Float32Array(N);
+      foamNext = new Float32Array(N);
+      heightBuf = new Float32Array(N);
+      gradXBuf = new Float32Array(N);
+      gradYBuf = new Float32Array(N);
+      foldBuf  = new Float32Array(N);
+
+      LSW = (SW >> 1) + 2;
+      LSH = (SH >> 1) + 2;
+      const lN = LSW*LSH;
+      lowH    = new Float32Array(lN);
+      lowHx   = new Float32Array(lN);
+      lowHy   = new Float32Array(lN);
+      lowFold = new Float32Array(lN);
+      lowW    = new Float32Array(lN);
+    }
+    addEventListener('resize', resize);
+
+    // ---------- Loop ----------
+    let startT = performance.now();
+    const hud = document.getElementById('hud');
+    let hudCount = 0;
+    function tick(now){
+      const t = (now - startT)/1000;
+      step(t);
+      render(t);
+      hudCount++;
+      if(hudCount % 8 === 0 && window.__diag){
+        const d = window.__diag;
+        hud.textContent = `${d.SW}×${d.SH}  dt=${d.dt.toFixed(3)}  N=${d.nActive}  maxH=${d.maxH}  minJ=${d.minJ}  folded=${d.foldedSamples}  breakPx=${d.breakPx}  foam=${d.foamSum} (max ${d.foamMax})`;
+      }
+      requestAnimationFrame(tick);
+    }
+
+    resize();
+    rebuildSpectrumIfNeeded();
+    for(let i=0; i<20; i++){ step(i*0.06); }
+    lastT = 0; startT = performance.now();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>

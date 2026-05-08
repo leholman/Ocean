@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Drone Ocean — Prototype v3</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;background:#000;overflow:hidden;font-family:"Helvetica Neue",Helvetica,Arial,sans-serif}
+    canvas{position:fixed;inset:0;width:100%;height:100%}
+
+    .panel{
+      position:fixed;
+      top:14px; right:14px;
+      width:310px;
+      max-height:calc(100vh - 28px);
+      overflow-y:auto;
+      background:rgba(0,0,0,0.78);
+      backdrop-filter:blur(10px);
+      -webkit-backdrop-filter:blur(10px);
+      color:#fff;
+      padding:14px 16px 16px;
+      border-radius:8px;
+      font-size:11px;
+      letter-spacing:0.02em;
+      z-index:10;
+      box-shadow:0 8px 30px rgba(0,0,0,.5);
+    }
+    .panel h2{
+      margin:0 0 8px;
+      font-size:11px;
+      font-weight:600;
+      letter-spacing:0.12em;
+      text-transform:uppercase;
+      color:rgba(255,255,255,.55);
+    }
+    .panel h3{
+      margin:14px 0 6px;
+      font-size:10px;
+      font-weight:600;
+      letter-spacing:0.14em;
+      text-transform:uppercase;
+      color:rgba(180,210,255,.7);
+      border-top:1px solid rgba(255,255,255,.1);
+      padding-top:10px;
+    }
+    .panel h3:first-of-type{ border-top:none; padding-top:0; }
+    .row{ display:flex; align-items:center; gap:8px; margin:5px 0; }
+    .row label{ flex:0 0 95px; color:rgba(255,255,255,.78); font-size:11px; }
+    .row input[type=range]{ flex:1; accent-color:#7cc5ff; height:14px; }
+    .row .val{ flex:0 0 46px; text-align:right; font-variant-numeric:tabular-nums; color:rgba(150,200,255,.95); font-size:10px; }
+    .row.swatch input[type=color]{ flex:1; height:22px; background:transparent; border:1px solid rgba(255,255,255,.15); border-radius:4px; padding:1px; }
+    .hud{
+      position:fixed;
+      bottom:14px; left:14px;
+      font:10px/1.4 "SF Mono",Menlo,monospace;
+      color:rgba(255,255,255,.45);
+      pointer-events:none;
+      letter-spacing:.04em;
+    }
+    button.reset{
+      width:100%;
+      margin-top:12px;
+      background:rgba(255,255,255,.08);
+      color:#fff;
+      border:1px solid rgba(255,255,255,.15);
+      padding:6px;
+      font:inherit;
+      font-size:10px;
+      letter-spacing:0.1em;
+      text-transform:uppercase;
+      border-radius:4px;
+      cursor:pointer;
+    }
+    button.reset:hover{ background:rgba(255,255,255,.15); }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="hud" id="hud">drone ocean v3</div>
+
+  <div class="panel" id="panel">
+    <h2>Drone Ocean v3 — Controls</h2>
+
+    <h3>Spectrum</h3>
+    <div class="row"><label>amplitude</label><input type="range" id="amp" min="0.1" max="2.5" step="0.05" value="1.0"><span class="val" id="amp_v"></span></div>
+    <div class="row"><label>peak λ (m)</label><input type="range" id="peakLambda" min="0.4" max="6" step="0.05" value="1.8"><span class="val" id="peakLambda_v"></span></div>
+    <div class="row"><label>spectrum width</label><input type="range" id="specWidth" min="0.2" max="2.0" step="0.05" value="0.9"><span class="val" id="specWidth_v"></span></div>
+    <div class="row"><label>direction</label><input type="range" id="meanDir" min="-3.14159" max="3.14159" step="0.02" value="0.20"><span class="val" id="meanDir_v"></span></div>
+    <div class="row"><label>dir spread</label><input type="range" id="dirSpread" min="0.0" max="1.5" step="0.02" value="0.35"><span class="val" id="dirSpread_v"></span></div>
+    <div class="row"><label>sharpness</label><input type="range" id="stokes" min="0.0" max="0.6" step="0.01" value="0.30"><span class="val" id="stokes_v"></span></div>
+    <div class="row"><label>world zoom</label><input type="range" id="zoom" min="1.0" max="6.0" step="0.1" value="2.6"><span class="val" id="zoom_v"></span></div>
+    <div class="row"><label>time scale</label><input type="range" id="timeScale" min="0.1" max="2.5" step="0.05" value="0.65"><span class="val" id="timeScale_v"></span></div>
+
+    <h3>Breaking</h3>
+    <div class="row"><label>steepness crit</label><input type="range" id="critSteep" min="0.10" max="0.80" step="0.01" value="0.34"><span class="val" id="critSteep_v"></span></div>
+    <div class="row"><label>height min</label><input type="range" id="hMin" min="0.0" max="1.5" step="0.02" value="0.30"><span class="val" id="hMin_v"></span></div>
+    <div class="row"><label>line softness</label><input type="range" id="lineSoft" min="0.005" max="0.15" step="0.005" value="0.040"><span class="val" id="lineSoft_v"></span></div>
+    <div class="row"><label>break patch sz</label><input type="range" id="patchSize" min="0.2" max="3.0" step="0.05" value="0.70"><span class="val" id="patchSize_v"></span></div>
+    <div class="row"><label>patch threshold</label><input type="range" id="patchThr" min="-0.5" max="0.6" step="0.02" value="-0.10"><span class="val" id="patchThr_v"></span></div>
+    <div class="row"><label>deposit rate</label><input type="range" id="depositRate" min="0.5" max="20" step="0.2" value="7.0"><span class="val" id="depositRate_v"></span></div>
+
+    <h3>Foam Field</h3>
+    <div class="row"><label>foam decay</label><input type="range" id="foamDecay" min="0.05" max="2.0" step="0.02" value="0.40"><span class="val" id="foamDecay_v"></span></div>
+    <div class="row"><label>foam spread</label><input type="range" id="foamSpread" min="0" max="0.4" step="0.01" value="0.10"><span class="val" id="foamSpread_v"></span></div>
+    <div class="row"><label>foam drift</label><input type="range" id="foamDrift" min="0" max="2.0" step="0.05" value="0.35"><span class="val" id="foamDrift_v"></span></div>
+
+    <h3>Color & Light</h3>
+    <div class="row swatch"><label>deep</label><input type="color" id="cDeep" value="#04141f"></div>
+    <div class="row swatch"><label>mid</label><input type="color" id="cMid"  value="#0a3550"></div>
+    <div class="row swatch"><label>crest</label><input type="color" id="cCrest" value="#2a78a8"></div>
+    <div class="row swatch"><label>foam</label><input type="color" id="cFoam" value="#f5fbff"></div>
+    <div class="row"><label>face shade</label><input type="range" id="faceShade" min="0" max="2" step="0.05" value="0.70"><span class="val" id="faceShade_v"></span></div>
+    <div class="row"><label>foam edge</label><input type="range" id="foamEdge" min="0" max="0.6" step="0.01" value="0.05"><span class="val" id="foamEdge_v"></span></div>
+    <div class="row"><label>vignette</label><input type="range" id="vign" min="0" max="2" step="0.05" value="0.85"><span class="val" id="vign_v"></span></div>
+
+    <button class="reset" id="reset">Reset to defaults</button>
+  </div>
+
+  <script>
+  (function(){
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+
+    const SIM_MAX = 380;
+    let W=0, H=0, SW=0, SH=0;
+
+    const sim = document.createElement('canvas');
+    const sctx = sim.getContext('2d', { alpha:false, willReadFrequently:true });
+    let img=null, pix=null;
+    let foam=null, foamNext=null;
+    let heightBuf=null, gradXBuf=null, gradYBuf=null;
+
+    // ---------- Params ----------
+    const P = {
+      amp:1.0, peakLambda:1.8, specWidth:0.9,
+      meanDir:0.20, dirSpread:0.35, stokes:0.30,
+      zoom:2.6, timeScale:0.65,
+
+      critSteep:0.34, hMin:0.30, lineSoft:0.040,
+      patchSize:0.70, patchThr:-0.10, depositRate:7.0,
+
+      foamDecay:0.40, foamSpread:0.10, foamDrift:0.35,
+
+      cDeep:[0.016,0.078,0.122],
+      cMid:[0.039,0.208,0.314],
+      cCrest:[0.165,0.471,0.659],
+      cFoam:[0.961,0.984,1.000],
+
+      faceShade:0.70, foamEdge:0.05, vign:0.85
+    };
+
+    function hexToRgb(h){
+      const v = parseInt(h.slice(1), 16);
+      return [((v>>16)&255)/255, ((v>>8)&255)/255, (v&255)/255];
+    }
+    function rgbToHex(r,g,b){
+      const c = v => Math.max(0,Math.min(255,(v*255)|0)).toString(16).padStart(2,'0');
+      return '#' + c(r) + c(g) + c(b);
+    }
+
+    // ---------- The wave spectrum ----------
+    // We pre-build a list of N component waves drawn from a directional
+    // spectrum centered on (peakLambda, meanDir) with some width and angular
+    // spread. Each component has wavenumber k, direction (dx,dy), amplitude a,
+    // angular frequency ω = √(gk) (deep-water dispersion, g normalized = 1),
+    // and a fixed random phase φ. Total field is sum of cos(k(d·x) - ωt + φ).
+    //
+    // Why this matters: real swells aren't a single sinusoid. They're a band
+    // of frequencies traveling at different speeds (longer waves are faster).
+    // This is what produces the natural-looking irregular crests, occasional
+    // big sets, the way crests bend and merge — none of which a 2-component
+    // model can do.
+
+    const N_COMPONENTS = 16;
+    // Flat-array layout for hot loop performance.
+    // Per component: k, dx, dy, a, omega, phase
+    let comp_k     = new Float32Array(N_COMPONENTS);
+    let comp_dx    = new Float32Array(N_COMPONENTS);
+    let comp_dy    = new Float32Array(N_COMPONENTS);
+    let comp_a     = new Float32Array(N_COMPONENTS);
+    let comp_omega = new Float32Array(N_COMPONENTS);
+    let comp_phase = new Float32Array(N_COMPONENTS);
+    // Per-frame caches: sin(omega*t - phase) and cos(omega*t - phase)
+    let comp_sinB = new Float32Array(N_COMPONENTS);
+    let comp_cosB = new Float32Array(N_COMPONENTS);
+    // Pre-multiplied k * direction (for spatial phase = comp_kdx*wx + comp_kdy*wy)
+    let comp_kdx = new Float32Array(N_COMPONENTS);
+    let comp_kdy = new Float32Array(N_COMPONENTS);
+    // a * k (for gradient amplitude)
+    let comp_ak = new Float32Array(N_COMPONENTS);
+
+    let spectrumDirty = true;
+
+    // We rebuild spectrum only when relevant params change
+    let _lastPeak=null, _lastWidth=null, _lastDir=null, _lastSpread=null;
+
+    function rebuildSpectrumIfNeeded(){
+      if(_lastPeak===P.peakLambda && _lastWidth===P.specWidth &&
+         _lastDir===P.meanDir && _lastSpread===P.dirSpread) return;
+      _lastPeak=P.peakLambda; _lastWidth=P.specWidth;
+      _lastDir=P.meanDir; _lastSpread=P.dirSpread;
+
+      const kPeak = (2*Math.PI) / P.peakLambda;
+      const kMin = kPeak / (1 + P.specWidth);
+      const kMax = kPeak * (1 + P.specWidth);
+      let totalEnergy = 0;
+
+      for(let i=0; i<N_COMPONENTS; i++){
+        const u = (i + 0.5)/N_COMPONENTS;
+        const jitter = (hash01(i*7+1) - 0.5) * (1/N_COMPONENTS);
+        const kFrac = u + jitter;
+        const k = kMin * Math.pow(kMax/kMin, kFrac);
+
+        const angleOff = (hash01(i*11+3) - 0.5) * P.dirSpread * 4;
+        const dir = P.meanDir + angleOff;
+
+        const r = k / kPeak;
+        const energy = Math.exp(-Math.pow((r-1)/P.specWidth, 2) * 0.8) / (k*k);
+        const a = Math.sqrt(energy);
+
+        const cosA = Math.cos(angleOff);
+        const dirW = Math.max(0, cosA*cosA);
+        const finalA = a * Math.sqrt(dirW + 0.05);
+        totalEnergy += finalA*finalA;
+
+        const omega = Math.sqrt(k);
+        const phase = hash01(i*17+5) * Math.PI * 2;
+
+        comp_k[i] = k;
+        comp_dx[i] = Math.cos(dir);
+        comp_dy[i] = Math.sin(dir);
+        comp_a[i] = finalA;
+        comp_omega[i] = omega;
+        comp_phase[i] = phase;
+      }
+      const norm = 1 / Math.sqrt(totalEnergy + 1e-6);
+      for(let i=0; i<N_COMPONENTS; i++){
+        comp_a[i]   *= norm;
+        comp_kdx[i]  = comp_k[i] * comp_dx[i];
+        comp_kdy[i]  = comp_k[i] * comp_dy[i];
+        comp_ak[i]   = comp_a[i] * comp_k[i];
+      }
+    }
+
+    // Stable per-index hash → [0,1)
+    function hash01(i){
+      let n = (i*374761393 + 668265263)|0;
+      n ^= (n>>>13);
+      n = (n*1274126177)|0;
+      n ^= (n>>>16);
+      return (n>>>0)/4294967296;
+    }
+
+    // ---------- Slider wiring ----------
+    function bindRange(id, key, fmt){
+      const el = document.getElementById(id);
+      const lab = document.getElementById(id+'_v');
+      el.value = P[key];
+      lab.textContent = fmt ? fmt(P[key]) : (+P[key]).toFixed(2);
+      el.addEventListener('input', () => {
+        P[key] = parseFloat(el.value);
+        lab.textContent = fmt ? fmt(P[key]) : (+P[key]).toFixed(2);
+      });
+    }
+    function bindColor(id, key){
+      const el = document.getElementById(id);
+      el.value = rgbToHex(...P[key]);
+      el.addEventListener('input', () => { P[key] = hexToRgb(el.value); });
+    }
+
+    bindRange('amp','amp');
+    bindRange('peakLambda','peakLambda', v=>v.toFixed(2));
+    bindRange('specWidth','specWidth');
+    bindRange('meanDir','meanDir', v=>v.toFixed(2)+' rad');
+    bindRange('dirSpread','dirSpread');
+    bindRange('stokes','stokes');
+    bindRange('zoom','zoom');
+    bindRange('timeScale','timeScale');
+    bindRange('critSteep','critSteep');
+    bindRange('hMin','hMin');
+    bindRange('lineSoft','lineSoft', v=>v.toFixed(3));
+    bindRange('patchSize','patchSize');
+    bindRange('patchThr','patchThr');
+    bindRange('depositRate','depositRate', v=>v.toFixed(1));
+    bindRange('foamDecay','foamDecay');
+    bindRange('foamSpread','foamSpread');
+    bindRange('foamDrift','foamDrift');
+    bindRange('faceShade','faceShade');
+    bindRange('foamEdge','foamEdge');
+    bindRange('vign','vign');
+    bindColor('cDeep','cDeep');
+    bindColor('cMid','cMid');
+    bindColor('cCrest','cCrest');
+    bindColor('cFoam','cFoam');
+
+    document.getElementById('reset').addEventListener('click', () => location.reload());
+
+    // ---------- Math helpers ----------
+    function clamp01(v){ return v<0?0:(v>1?1:v); }
+    function lerp(a,b,t){ return a+(b-a)*t; }
+    function smoothstep(a,b,x){
+      const t = clamp01((x-a)/(b-a));
+      return t*t*(3-2*t);
+    }
+    function hash2(x, y){
+      x |= 0; y |= 0;
+      let n = (x*374761393 + y*668265263)|0;
+      n ^= (n>>>13);
+      n = (n*1274126177)|0;
+      n ^= (n>>>16);
+      return (n>>>0)/4294967296;
+    }
+    function vnoise(x, y){
+      const xi = Math.floor(x), yi = Math.floor(y);
+      const xf = x-xi, yf = y-yi;
+      const u = xf*xf*(3-2*xf);
+      const v = yf*yf*(3-2*yf);
+      const a = hash2(xi,yi), b = hash2(xi+1,yi);
+      const c = hash2(xi,yi+1), d = hash2(xi+1,yi+1);
+      const ab = a+(b-a)*u, cd = c+(d-c)*u;
+      return ((ab+(cd-ab)*v)*2 - 1);
+    }
+
+    // ---------- Wave field eval ----------
+    // Returns {h, hx, hy} — height and gradient at world position (wx,wy) at time t.
+    // Computes analytic gradient by summing component derivatives (no numerical diff).
+    // h is amplified by P.amp, gradients similarly. Stokes sharpening applied to total.
+    function evalWaveField(wx, wy, t, out){
+      let h = 0, hx = 0, hy = 0;
+      const tt = t * P.timeScale;
+      const A = P.amp;
+      for(let i=0; i<components.length; i++){
+        const c = components[i];
+        const phase = c.k*(c.dx*wx + c.dy*wy) - c.omega*tt + c.phase;
+        const s = Math.sin(phase);
+        h  += c.a * s;
+        const cs = Math.cos(phase) * c.a * c.k;
+        hx += cs * c.dx;
+        hy += cs * c.dy;
+      }
+      // Stokes sharpening: replace s with s + α s³ → derivative becomes (1 + 3α s²) cos(...)
+      // We approximate this on the *summed* h using its own value as the proxy,
+      // which gives sharper crests / flatter troughs as α grows.
+      if(P.stokes > 0){
+        const a = P.stokes;
+        const hSat = clamp(h, -1.5, 1.5);
+        const fac = 1 + a * hSat * hSat * 1.5;
+        // Adjust h
+        const hAdd = a * h * h * h * 0.5;
+        // Apply to gradients via chain rule: d/dx[h + a h³/2] = (1 + 1.5 a h²) hx
+        hx *= 1 + 1.5*a*h*h;
+        hy *= 1 + 1.5*a*h*h;
+        h += hAdd;
+        // suppress unused warning
+        (void 0, fac);
+      }
+      out.h  = h * A;
+      out.hx = hx * A;
+      out.hy = hy * A;
+    }
+    function clamp(v,lo,hi){ return v<lo?lo:(v>hi?hi:v); }
+
+    // ---------- Sim step ----------
+    let lastT = 0;
+    const _eval = { h:0, hx:0, hy:0 };
+
+    function step(t){
+      let dt = t - lastT;
+      if(dt < 0) dt = 0;
+      if(dt > 0.05) dt = 0.05;
+      lastT = t;
+
+      rebuildSpectrumIfNeeded();
+
+      const aspect = SH/SW;
+      const Z = P.zoom;
+
+      // Mean travel direction (used for foam advection and the directional steepness derivative)
+      const meanDx = Math.cos(P.meanDir), meanDy = Math.sin(P.meanDir);
+
+      // ---- Pass 1: fill height + gradient buffers ----
+      // World coords: x in [-Z/2, Z/2], y in [-Z*aspect/2, Z*aspect/2]
+      // Pixel-to-world scale (per-axis):
+      const pxToWorld_x = Z / SW;
+      const pxToWorld_y = (Z*aspect) / SH;
+
+      let i = 0;
+      for(let y=0; y<SH; y++){
+        const wy = (y/SH - 0.5)*Z*aspect;
+        for(let x=0; x<SW; x++, i++){
+          const wx = (x/SW - 0.5)*Z;
+          evalWaveField(wx, wy, t, _eval);
+          heightBuf[i] = _eval.h;
+          gradXBuf[i]  = _eval.hx;
+          gradYBuf[i]  = _eval.hy;
+        }
+      }
+
+      // ---- Pass 2: deposit foam along entire breaking line ----
+      //
+      // For each pixel, we compute a continuous "breaking field" B in [0,1]:
+      //   - Crest factor: how close this pixel is to a local max along travel dir
+      //   - Forward-steepness factor: does the forward slope exceed critical?
+      //   - Patch factor: does the slow-drifting break-allowance noise permit?
+      //   - Height factor: minimum amplitude requirement
+      //
+      // B is everywhere continuous, so the set {B > 0} forms ribbons/lines along
+      // the steepest crests rather than scattered points. We deposit foam ∝ B*dt.
+      //
+      // CRITICAL: we DO NOT use a stochastic per-pixel coin flip. Foam line is born
+      // deterministically along the breaking crest.
+
+      const advAdv = t*0.04;
+      const patchScale = 1.0 / Math.max(0.05, P.patchSize);
+      const dotMax = 0.0;  // upper cap for dot product check (we want exactly the crest)
+      let _breakPx = 0, _maxH = 0, _maxSteep = 0;
+
+      // Convert critical world-space steepness into per-pixel-step steepness.
+      // Forward steepness (in physical units) = ∂h/∂s where s is along travel dir,
+      // measured in WORLD distance units. Since hx,hy are world-space gradients
+      // (they have units of h per world-unit), forward steepness = hx*dx + hy*dy directly.
+      const critS = P.critSteep;
+
+      for(let y=1; y<SH-1; y++){
+        for(let x=1; x<SW-1; x++){
+          const idx = y*SW + x;
+          const h = heightBuf[idx];
+          if(h > _maxH) _maxH = h;
+
+          // Quick reject: too low to break
+          if(h < P.hMin) continue;
+
+          // Crest detection along travel direction:
+          // Sample h at pixel ± a step in world-space along (meanDx, meanDy).
+          // We want the offset to correspond to ~1 sim-pixel along that axis,
+          // so we compute the equivalent pixel offset.
+          // For simplicity, take 2-pixel offset and project.
+          const stepPx = 2;
+          const dxStep = meanDx * stepPx;
+          const dyStep = meanDy * stepPx;
+          const xa = (x + dxStep)|0, ya = (y + dyStep)|0;
+          const xb = (x - dxStep)|0, yb = (y - dyStep)|0;
+          if(xa<0||xa>=SW||ya<0||ya>=SH||xb<0||xb>=SW||yb<0||yb>=SH) continue;
+          const hAhead  = heightBuf[ya*SW + xa];
+          const hBehind = heightBuf[yb*SW + xb];
+          // Crest factor: 1 when h is the max, fading as we move off the crest.
+          // Use a smooth dome instead of a hard "is local max" test — this is
+          // what gives us a thick line instead of a 1-pixel-wide ridge.
+          const crestness = clamp01( (h - 0.5*(hAhead + hBehind)) / Math.max(0.001, P.lineSoft) );
+
+          if(crestness <= 0) continue;
+
+          // Forward steepness: h gradient projected on travel direction.
+          // Negative because the FRONT face slopes downward in travel direction;
+          // we want the absolute steepness of the front face, so we use -gradient
+          // along travel dir and clamp positive.
+          const hx = gradXBuf[idx], hy = gradYBuf[idx];
+          const fwdSteep = -(hx*meanDx + hy*meanDy);  // positive on a forward-leaning crest's front
+          if(fwdSteep > _maxSteep) _maxSteep = fwdSteep;
+
+          // Steepness factor: 0 below critical, 1 well above. Smoothstep for a clean line edge.
+          const steepFactor = smoothstep(critS, critS*1.5, fwdSteep);
+          if(steepFactor <= 0) continue;
+
+          // Patch factor: spatial mask drifting with the swell, gates which crests break.
+          const wx = (x/SW - 0.5)*Z;
+          const wy = (y/SH - 0.5)*Z*aspect;
+          const pa = vnoise(wx*patchScale + meanDx*advAdv, wy*patchScale + meanDy*advAdv);
+          const pb = vnoise(wx*patchScale*2 - meanDx*advAdv*0.5, wy*patchScale*2 - meanDy*advAdv*0.5)*0.5;
+          const patch = (pa + pb)*0.6;
+          const patchFactor = smoothstep(P.patchThr, P.patchThr+0.3, patch);
+          if(patchFactor <= 0) continue;
+
+          // Height factor: only waves at least hMin tall break, with a soft ramp.
+          const heightFactor = smoothstep(P.hMin, P.hMin + 0.3, h);
+
+          const B = crestness * steepFactor * patchFactor * heightFactor;
+          if(B <= 0.001) continue;
+
+          // Deposit foam directly into the buffer for THIS pixel.
+          // Whole breaking line gets foam this frame — no random gating.
+          foam[idx] += B * P.depositRate * dt;
+          if(foam[idx] > 1.5) foam[idx] = 1.5;
+          _breakPx++;
+        }
+      }
+
+      // ---- Pass 3: foam evolution (advect + decay + diffuse) ----
+      const decayMul = Math.exp(-dt * P.foamDecay);
+      // Foam drifts with the swell at a fraction of phase speed.
+      // Phase speed for a representative wave: c = ω/k. For the peak wave,
+      // c_peak = √g/k_peak (deep-water). We just use the mean direction × a tunable scalar.
+      const phaseSpeedRef = 0.8; // (worldunits/sec for the peak wave at our normalization)
+      const driftWorld = phaseSpeedRef * P.foamDrift;
+      const vx = (driftWorld / pxToWorld_x) * meanDx * dt;
+      const vy = (driftWorld / pxToWorld_y) * meanDy * dt;
+      const diff = P.foamSpread;
+
+      for(let y=0; y<SH; y++){
+        const ym = y>0?y-1:0, yp = y<SH-1?y+1:SH-1;
+        for(let x=0; x<SW; x++){
+          const xm = x>0?x-1:0, xp = x<SW-1?x+1:SW-1;
+          const srcX = x - vx;
+          const srcY = y - vy;
+          const sx0 = clamp(Math.floor(srcX), 0, SW-1)|0;
+          const sx1 = clamp(sx0+1, 0, SW-1)|0;
+          const sy0 = clamp(Math.floor(srcY), 0, SH-1)|0;
+          const sy1 = clamp(sy0+1, 0, SH-1)|0;
+          const fx = srcX - Math.floor(srcX);
+          const fy = srcY - Math.floor(srcY);
+          const f00 = foam[sy0*SW+sx0], f10 = foam[sy0*SW+sx1];
+          const f01 = foam[sy1*SW+sx0], f11 = foam[sy1*SW+sx1];
+          const adv = lerp(lerp(f00,f10,fx), lerp(f01,f11,fx), fy);
+
+          const f_n = foam[ym*SW+x], f_s = foam[yp*SW+x];
+          const f_w = foam[y*SW+xm], f_e = foam[y*SW+xp];
+          const blur = (f_n + f_s + f_w + f_e) * 0.25;
+
+          foamNext[y*SW+x] = (adv*(1-diff) + blur*diff) * decayMul;
+        }
+      }
+      const tmp = foam; foam = foamNext; foamNext = tmp;
+
+      window.__diag = { dt, breakPx:_breakPx, maxH:_maxH.toFixed(2), maxSteep:_maxSteep.toFixed(2), SW, SH };
+    }
+
+    // ---------- Render ----------
+    function render(t){
+      // Lighting roughly co-aligned with swell direction so windward faces catch it
+      const lDir = P.meanDir + 1.4;
+      const lx = 0.30*Math.cos(lDir), ly = 0.30*Math.sin(lDir), lz = 0.95;
+      const lN = 1/Math.hypot(lx,ly,lz);
+      const lX = lx*lN, lY = ly*lN, lZ = lz*lN;
+
+      let p = 0, foamSum=0, foamMax=0;
+      for(let y=0; y<SH; y++){
+        const ym = y>0?y-1:0, yp = y<SH-1?y+1:SH-1;
+        const uy = (y/SH - 0.5);
+        for(let x=0; x<SW; x++){
+          const xm = x>0?x-1:0, xp = x<SW-1?x+1:SW-1;
+          const idx = y*SW + x;
+
+          const h  = heightBuf[idx];
+          // Use precomputed gradients
+          const hx = gradXBuf[idx], hy = gradYBuf[idx];
+          const slopeMag = Math.sqrt(hx*hx + hy*hy);
+
+          // Surface normal
+          let nx = -hx, ny = -hy, nz = 1;
+          const nN = 1/Math.hypot(nx,ny,nz);
+          nx*=nN; ny*=nN; nz*=nN;
+          const ndotl = clamp01(nx*lX + ny*lY + nz*lZ);
+
+          // Base water color (3-stop ramp on h)
+          const hNorm = clamp01(0.5 + h*0.40);
+          let r,g,b;
+          if(hNorm < 0.5){
+            const u = hNorm*2;
+            r = lerp(P.cDeep[0], P.cMid[0], u);
+            g = lerp(P.cDeep[1], P.cMid[1], u);
+            b = lerp(P.cDeep[2], P.cMid[2], u);
+          } else {
+            const u = (hNorm-0.5)*2;
+            r = lerp(P.cMid[0], P.cCrest[0], u);
+            g = lerp(P.cMid[1], P.cCrest[1], u);
+            b = lerp(P.cMid[2], P.cCrest[2], u);
+          }
+
+          // Diffuse face shading — windward face brighter
+          const diffuse = 1.0 + P.faceShade*(ndotl - 0.5);
+          r *= diffuse; g *= diffuse; b *= diffuse;
+
+          // Slope-driven sky catch on steep faces
+          const slopeLift = clamp01(slopeMag*1.2) * 0.10;
+          r = lerp(r, P.cCrest[0]*1.20, slopeLift);
+          g = lerp(g, P.cCrest[1]*1.20, slopeLift);
+          b = lerp(b, P.cCrest[2]*1.20, slopeLift);
+
+          // Foam composite
+          const f = foam[idx];
+          if(f > foamMax) foamMax = f;
+          foamSum += f;
+          const fVisible = smoothstep(P.foamEdge, P.foamEdge + 0.5, f);
+          const fBright  = smoothstep(0.45, 1.10, f);
+
+          r = lerp(r, P.cFoam[0], fVisible);
+          g = lerp(g, P.cFoam[1], fVisible);
+          b = lerp(b, P.cFoam[2], fVisible);
+
+          const bloom = fBright * 0.10;
+          r = clamp01(r + bloom);
+          g = clamp01(g + bloom);
+          b = clamp01(b + bloom);
+
+          // Vignette
+          const ux = (x/SW - 0.5);
+          const vv = clamp01(1 - (ux*ux + uy*uy)*P.vign);
+          const vfac = 0.84 + 0.16*vv;
+          r *= vfac; g *= vfac; b *= vfac;
+
+          // Tiny grain
+          const gr = vnoise(x*0.7 + t*0.1, y*0.7 - t*0.08) * 0.005;
+          r = clamp01(r+gr); g = clamp01(g+gr); b = clamp01(b+gr);
+
+          pix[p++] = (r*255)|0;
+          pix[p++] = (g*255)|0;
+          pix[p++] = (b*255)|0;
+          pix[p++] = 255;
+        }
+      }
+      sctx.putImageData(img, 0, 0);
+
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(sim, 0, 0, W, H);
+
+      if(window.__diag){
+        window.__diag.foamSum = foamSum.toFixed(0);
+        window.__diag.foamMax = foamMax.toFixed(2);
+      }
+    }
+
+    // ---------- Resize ----------
+    function resize(){
+      W = innerWidth; H = innerHeight;
+      canvas.width = W; canvas.height = H;
+      const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H)*0.55)));
+      if(W>=H){ SH = maxDim; SW = Math.floor(maxDim*(W/H)); }
+      else    { SW = maxDim; SH = Math.floor(maxDim*(H/W)); }
+      SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+      SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+      sim.width = SW; sim.height = SH;
+      img = sctx.createImageData(SW,SH);
+      pix = img.data;
+      const N = SW*SH;
+      foam = new Float32Array(N);
+      foamNext = new Float32Array(N);
+      heightBuf = new Float32Array(N);
+      gradXBuf = new Float32Array(N);
+      gradYBuf = new Float32Array(N);
+    }
+    addEventListener('resize', resize);
+
+    // ---------- Loop ----------
+    let startT = performance.now();
+    const hud = document.getElementById('hud');
+    let hudCount = 0;
+    function tick(now){
+      const t = (now - startT)/1000;
+      step(t);
+      render(t);
+      hudCount++;
+      if(hudCount % 8 === 0 && window.__diag){
+        const d = window.__diag;
+        hud.textContent = `${d.SW}×${d.SH}  dt=${d.dt.toFixed(3)}  maxH=${d.maxH}  maxSteep=${d.maxSteep}  breakPx=${d.breakPx}  foam=${d.foamSum} (max ${d.foamMax})`;
+      }
+      requestAnimationFrame(tick);
+    }
+
+    resize();
+    rebuildSpectrumIfNeeded();
+    // Warm up so first frame isn't a still ocean
+    for(let i=0; i<60; i++){ step(i*0.05); }
+    lastT = 0; startT = performance.now();
+    requestAnimationFrame(tick);
+  })();
+  </script>
+</body>
+</html>

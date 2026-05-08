@@ -1,0 +1,697 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Luke E. Holman — Marine Researcher</title>
+  <style>
+    :root{
+      --bg0:#041018; --bg1:#071b24;
+      --text:rgba(255,255,255,.86);
+      --line:rgba(255,255,255,.10);
+      --glass:rgba(0,0,0,.16);
+      --shadow: 0 18px 50px rgba(0,0,0,.45);
+      --radius:14px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; overflow:hidden;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 18% 12%, rgba(120,220,255,.10), transparent 58%),
+        radial-gradient(900px 650px at 82% 18%, rgba(70,190,255,.08), transparent 62%),
+        radial-gradient(900px 900px at 55% 85%, rgba(20,130,160,.10), transparent 60%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+    }
+    canvas{position:fixed; inset:0; width:100%; height:100%}
+
+    .shell{
+      position:fixed; left:18px; top:16px;
+      width:min(820px, calc(100vw - 36px));
+      z-index:10; pointer-events:none;
+    }
+    .label{
+      pointer-events:auto;
+      padding:12px 14px;
+      border-radius:var(--radius);
+      border:1px solid var(--line);
+      background: var(--glass);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      box-shadow: var(--shadow);
+      font-size:13px;
+      letter-spacing:.2px;
+      color: rgba(255,255,255,.72);
+    }
+    .label b{color:rgba(255,255,255,.92); font-weight:680}
+    .role{color:rgba(255,255,255,.70)}
+    .meta{font-size:12px; color:rgba(255,255,255,.56); margin-top:3px}
+
+    .nav{
+      pointer-events:auto;
+      margin-top:10px;
+      display:flex; gap:10px; flex-wrap:wrap;
+    }
+    .pill{
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: rgba(255,255,255,.78);
+      padding:10px 14px;
+      border-radius:999px;
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      cursor:pointer;
+      font-size:13px;
+      letter-spacing:.2px;
+      user-select:none;
+    }
+    .pill[aria-selected="true"]{
+      background: rgba(255,255,255,.10);
+      color: rgba(255,255,255,.92);
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .panel{
+      pointer-events:auto;
+      margin-top:12px;
+      padding:14px;
+      border-radius:calc(var(--radius) + 2px);
+      border:1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: var(--shadow);
+      max-height:min(68vh,720px);
+      overflow:auto;
+      display:none;
+    }
+    .panel[data-open="true"]{display:block}
+    .section{display:none}
+    .section[data-active="true"]{display:block}
+
+    h2{margin:0 0 10px 0; font-size:14px; color:rgba(255,255,255,.90)}
+    h3{margin:14px 0 6px 0; font-size:13px; color:rgba(255,255,255,.86)}
+    p{margin:0 0 10px 0; font-size:13px; line-height:1.55; color:rgba(255,255,255,.72)}
+    .card{
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      border-radius:12px;
+      padding:12px;
+      margin-top:10px;
+    }
+    .linklist{display:flex; gap:12px; flex-wrap:wrap}
+    a{
+      color:rgba(140,220,255,.92);
+      text-decoration:none;
+      border-bottom:1px solid rgba(140,220,255,.30);
+    }
+    a:hover{border-bottom-color: rgba(140,220,255,.65)}
+  </style>
+</head>
+
+<body>
+  <canvas id="c"></canvas>
+
+  <div class="shell">
+    <div class="label">
+      <b>Luke E. Holman</b> <span class="role">— Marine Researcher</span>
+      <div class="meta">Population genomics • eDNA/metabarcoding • Coastal ecosystems</div>
+    </div>
+
+    <div class="nav" role="tablist" aria-label="Site sections">
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="research">Research</button>
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="about">About me</button>
+      <button class="pill" type="button" role="tab" aria-selected="false" data-tab="links">Links</button>
+    </div>
+
+    <div class="panel" data-open="false" role="region" aria-label="Content" id="contentPanel">
+      <div class="section" data-section="research" data-active="false">
+        <h2>Research</h2>
+        <div class="card">
+          <h3>Environmental DNA for biodiversity monitoring</h3>
+          <p>Filler text: sampling and analysis pipelines that turn water samples into robust, interpretable biodiversity signals.</p>
+        </div>
+        <div class="card">
+          <h3>Population structure and connectivity</h3>
+          <p>Filler text: integrating genetic markers with spatial models to infer dispersal and management-relevant connectivity.</p>
+        </div>
+      </div>
+
+      <div class="section" data-section="about" data-active="false">
+        <h2>About me</h2>
+        <p>Filler text: I work at the interface of molecular ecology and coastal ecosystem science, combining field sampling with DNA-based methods and quantitative analysis.</p>
+        <div class="card">
+          <p>Marine ecology • Molecular methods • Quantitative analysis</p>
+        </div>
+      </div>
+
+      <div class="section" data-section="links" data-active="false">
+        <h2>Links</h2>
+        <div class="linklist">
+          <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a>
+          <a href="https://bsky.app/" target="_blank" rel="noopener">Bluesky</a>
+          <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      // Swapped presets: Research <-> Links
+      const PRESETS = {
+        research: {F:0.0205, k:0.0510, Du:0.17, Dv:0.15, dt:1.27, adv:0.09, foam:2.0, contrast:0.6}, // was links
+        about:    {F:0.0205, k:0.0510, Du:0.17, Dv:0.13, dt:1.27, adv:0.02, foam:2.0, contrast:0.6},
+        links:    {F:0.0205, k:0.0525, Du:0.28, Dv:0.13, dt:1.27, adv:0.02, foam:2.0, contrast:0.6}, // was research
+      };
+
+      const canvas = document.getElementById('c');
+      const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
+
+      const SIM_MAX = 360;
+      let W=0,H=0,SW=0,SH=0;
+
+      const oceanSim = document.createElement('canvas');
+      const oceanCtx = oceanSim.getContext('2d', { alpha:false, willReadFrequently:true });
+      let oceanImg=null, oceanPix=null, oceanHeights=null;
+
+      const rdSim = document.createElement('canvas');
+      const rdCtx = rdSim.getContext('2d', { alpha:false, willReadFrequently:true });
+      let rdImg=null, rdPix=null, U=null, V=null, U2=null, V2=null;
+
+      function clamp01(v){ return v<0?0:(v>1?1:v); }
+      function lerp(a,b,t){ return a+(b-a)*t; }
+      function smoothstep(a,b,x){
+        const t = clamp01((x-a)/(b-a));
+        return t*t*(3-2*t);
+      }
+
+      function hash2(x, y){
+        x |= 0; y |= 0;
+        let n = (x * 374761393 + y * 668265263) | 0;
+        n ^= (n >>> 13);
+        n = (n * 1274126177) | 0;
+        n ^= (n >>> 16);
+        return (n >>> 0) / 4294967296;
+      }
+      function vnoise(x, y){
+        const xi = Math.floor(x), yi = Math.floor(y);
+        const xf = x - xi, yf = y - yi;
+        const u = xf*xf*(3 - 2*xf);
+        const v = yf*yf*(3 - 2*yf);
+
+        const a = hash2(xi,   yi);
+        const b = hash2(xi+1, yi);
+        const c = hash2(xi,   yi+1);
+        const d = hash2(xi+1, yi+1);
+
+        const ab = a + (b-a)*u;
+        const cd = c + (d-c)*u;
+        return ((ab + (cd-ab)*v) * 2 - 1);
+      }
+
+      // ---------- Ocean (entry) ----------
+      const O = { speed:0.62, amp:0.19, depth:1.00, glint:1.00, foam:1.00, breaks:1.00, spray:1.00, zoom:2.30, light:1.00, vign:1.00 };
+      const oceanCols = {
+        deep0:[0.01,0.10,0.16], deep1:[0.02,0.16,0.24],
+        mid0:[0.03,0.24,0.32],  mid1:[0.06,0.32,0.40],
+        crest:[0.90,0.97,1.00], glint:[0.55,0.86,0.94]
+      };
+      const baseL = { x:0.45, y:-0.18, z:0.87 };
+      const windAng = -0.55;
+      const wX = Math.cos(windAng), wY = Math.sin(windAng);
+
+      function oceanHeight(wx, wy, t){
+        const th=-0.55;
+        const dx0=Math.cos(th), dy0=Math.sin(th);
+        const tt=t*O.speed;
+        let h=0;
+
+        let ph=(wx*dx0+wy*dy0)*0.62 + tt*0.60;
+        let s=Math.sin(ph); h += (s + 0.20*s*s*s)*1.00;
+
+        const th1=th+0.85;
+        ph=(wx*Math.cos(th1)+wy*Math.sin(th1))*0.98 + tt*0.46;
+        s=Math.sin(ph); h += (s + 0.16*s*s*s)*0.45;
+
+        const th2=th-1.05;
+        ph=(wx*Math.cos(th2)+wy*Math.sin(th2))*1.35 + tt*0.38;
+        s=Math.sin(ph); h += (s + 0.12*s*s*s)*0.24;
+
+        const adv=tt*0.30;
+        h += vnoise(wx*0.60+adv, wy*0.60-adv)*0.22;
+
+        return h*O.amp;
+      }
+
+      function renderOcean(t){
+        const worldScale=O.zoom;
+        const aspect=SH/SW;
+
+        const lx=baseL.x*O.light, ly=baseL.y*O.light, lz=baseL.z;
+        const invL=1/Math.hypot(lx,ly,lz);
+        const lX=lx*invL, lY=ly*invL, lZ=lz*invL;
+
+        let idx=0;
+        for(let y=0;y<SH;y++){
+          const wy=(y/SH-0.5)*worldScale*aspect;
+          for(let x=0;x<SW;x++,idx++){
+            const wx=(x/SW-0.5)*worldScale;
+            oceanHeights[idx]=oceanHeight(wx,wy,t);
+          }
+        }
+
+        const epsx=worldScale/SW, epsy=(worldScale*aspect)/SH;
+        const inv2epsx=1/(2*epsx), inv2epsy=1/(2*epsy);
+
+        const H_THR=0.095*O.breaks, H_SOFT=0.060;
+        const S_THR=0.075*O.breaks, S_SOFT=0.120;
+
+        let p=0;
+        for(let y=0;y<SH;y++){
+          const y0=y===0?0:y-1, y1=y===SH-1?SH-1:y+1;
+          const uy=(y/SH-0.5);
+          for(let x=0;x<SW;x++){
+            const x0=x===0?0:x-1, x1=x===SW-1?SW-1:x+1;
+            const i=y*SW+x;
+            const h=oceanHeights[i];
+
+            const hx=(oceanHeights[y*SW+x1]-oceanHeights[y*SW+x0])*inv2epsx;
+            const hy=(oceanHeights[y1*SW+x]-oceanHeights[y0*SW+x])*inv2epsy;
+
+            let nx=-hx, ny=-hy, nz=1;
+            const nInv=1/Math.hypot(nx,ny,nz);
+            nx*=nInv; ny*=nInv; nz*=nInv;
+
+            const ndotl=clamp01(nx*lX+ny*lY+nz*lZ);
+            const diffuse=0.28+0.52*ndotl;
+
+            const hm=clamp01(0.50 + h*(2.25*O.depth));
+            const t1=clamp01(hm*1.05);
+
+            let r=lerp(oceanCols.deep0[0],oceanCols.deep1[0],t1);
+            let g=lerp(oceanCols.deep0[1],oceanCols.deep1[1],t1);
+            let b=lerp(oceanCols.deep0[2],oceanCols.deep1[2],t1);
+
+            const t2=clamp01((hm-0.20)/0.90);
+            r=lerp(r, lerp(oceanCols.mid0[0],oceanCols.mid1[0],t2), t2);
+            g=lerp(g, lerp(oceanCols.mid0[1],oceanCols.mid1[1],t2), t2);
+            b=lerp(b, lerp(oceanCols.mid0[2],oceanCols.mid1[2],t2), t2);
+
+            r*=diffuse; g*=diffuse; b*=diffuse;
+
+            const slopeMag=Math.sqrt(hx*hx+hy*hy);
+            const slope=clamp01(slopeMag*1.2);
+            const gl=Math.pow(ndotl,6)*(0.08+0.18*slope)*O.glint;
+
+            r=lerp(r,oceanCols.glint[0],gl);
+            g=lerp(g,oceanCols.glint[1],gl);
+            b=lerp(b,oceanCols.glint[2],gl);
+
+            const foamH=smoothstep(H_THR,H_THR+H_SOFT,h);
+            const foamS=smoothstep(S_THR,S_THR+S_SOFT,slopeMag);
+            let foam=foamH*foamS;
+
+            const wx=(x/SW-0.5), wy=(y/SH-0.5);
+            const adv=t*0.10*O.speed;
+            const edge=vnoise((wx*5.0)+wX*adv, (wy*5.0)+wY*adv);
+            const edgeMask=smoothstep(-0.15,0.55,edge);
+            foam *= (0.55+0.45*edgeMask);
+
+            const adv2=t*0.35*O.speed;
+            const sp=vnoise(wx*22.0+wX*adv2, wy*22.0+wY*adv2);
+            const speck=smoothstep(0.35,0.78,sp);
+            const spray=foam*speck*0.55*O.spray;
+
+            const whitewater=clamp01((foam*0.55+spray)*O.foam);
+
+            r=lerp(r,oceanCols.crest[0],whitewater);
+            g=lerp(g,oceanCols.crest[1],whitewater);
+            b=lerp(b,oceanCols.crest[2],whitewater);
+
+            const bloom=whitewater*(0.06+0.10*ndotl);
+            r=clamp01(r+bloom); g=clamp01(g+bloom); b=clamp01(b+bloom);
+
+            const ux=(x/SW-0.5);
+            const vv=clamp01(1-(ux*ux+uy*uy)*(0.90+0.20*O.vign));
+            const vfac=0.86+0.14*vv;
+            r*=vfac; g*=vfac; b*=vfac;
+
+            const gr=vnoise(x*0.18+t*0.06, y*0.18-t*0.05)*0.008;
+            r=clamp01(r+gr); g=clamp01(g+gr); b=clamp01(b+gr);
+
+            oceanPix[p++]=(r*255)|0;
+            oceanPix[p++]=(g*255)|0;
+            oceanPix[p++]=(b*255)|0;
+            oceanPix[p++]=255;
+          }
+        }
+        oceanCtx.putImageData(oceanImg,0,0);
+      }
+
+      // ---------- RD ----------
+      let RD = {...PRESETS.research};
+      let rdDirty = true;
+
+      // Warm-up happens DURING the ocean page (non-blocking).
+      let warmupRemaining = 0;
+      let warmupInProgress = false;
+
+      function initRDSpacedDots(){
+        U.fill(1.0);
+        V.fill(0.0);
+
+        const minDim = Math.min(SW,SH);
+        const cell = Math.max(26, (minDim / 10) | 0);
+        const dotR = Math.max(2, (cell * 0.13) | 0);
+        const pDot = 0.35;
+
+        for(let cy = cell/2; cy < SH; cy += cell){
+          for(let cx = cell/2; cx < SW; cx += cell){
+            const r0 = hash2(cx*29, cy*31);
+            if(r0 > pDot) continue;
+
+            const jx = (hash2(cx*37, cy*41) - 0.5) * cell * 0.70;
+            const jy = (hash2(cx*43, cy*47) - 0.5) * cell * 0.70;
+
+            const x = cx + jx;
+            const y = cy + jy;
+
+            const r2 = dotR*dotR;
+            const x0 = Math.max(0, (x-dotR)|0), x1 = Math.min(SW-1, (x+dotR)|0);
+            const y0 = Math.max(0, (y-dotR)|0), y1 = Math.min(SH-1, (y+dotR)|0);
+
+            for(let yy=y0; yy<=y1; yy++){
+              for(let xx=x0; xx<=x1; xx++){
+                const dx=xx-x, dy=yy-y;
+                if(dx*dx+dy*dy<=r2){
+                  const i=yy*SW+xx;
+                  V[i]=0.90;
+                  U[i]=0.32;
+                }
+              }
+            }
+          }
+        }
+        rdDirty = true;
+      }
+
+      function lap(A,x,y){
+        const xm = x===0?0:x-1, xp=x===SW-1?SW-1:x+1;
+        const ym = y===0?0:y-1, yp=y===SH-1?SH-1:y+1;
+
+        const c  = A[y*SW + x];
+        const n  = A[ym*SW + x];
+        const s  = A[yp*SW + x];
+        const w  = A[y*SW + xm];
+        const e  = A[y*SW + xp];
+
+        const nw = A[ym*SW + xm];
+        const ne = A[ym*SW + xp];
+        const sw = A[yp*SW + xm];
+        const se = A[yp*SW + xp];
+
+        return (n + s + w + e - 4*c) * 0.20 + (nw + ne + sw + se - 4*c) * 0.05;
+      }
+
+      function stepRD(t){
+        const sub=2;
+        for(let s=0;s<sub;s++){
+          for(let y=0;y<SH;y++){
+            for(let x=0;x<SW;x++){
+              const i=y*SW+x;
+              const u=U[i], v=V[i];
+              const uvv=u*v*v;
+
+              let du = RD.Du*lap(U,x,y) - uvv + RD.F*(1-u);
+              let dv = RD.Dv*lap(V,x,y) + uvv - (RD.F+RD.k)*v;
+
+              if(RD.adv>0.0001){
+                const a=(hash2((x+((t*20)|0))&1023,(y-((t*18)|0))&1023)*2-1);
+                const b=(hash2((x-((t*14)|0))&1023,(y+((t*22)|0))&1023)*2-1);
+                const vx=0.70 + a*0.35;
+                const vy=0.20 + b*0.35;
+
+                const xm=x===0?0:x-1, xp=x===SW-1?SW-1:x+1;
+                const ym=y===0?0:y-1, yp=y===SH-1?SH-1:y+1;
+
+                const dudx=(U[y*SW+xp]-U[y*SW+xm])*0.5;
+                const dudy=(U[yp*SW+x]-U[ym*SW+x])*0.5;
+                const dvdx=(V[y*SW+xp]-V[y*SW+xm])*0.5;
+                const dvdy=(V[yp*SW+x]-V[ym*SW+x])*0.5;
+
+                du -= RD.adv*(vx*dudx + vy*dudy)*0.15;
+                dv -= RD.adv*(vx*dvdx + vy*dvdy)*0.15;
+              }
+
+              let un=u+du*RD.dt;
+              let vn=v+dv*RD.dt;
+
+              if(un<0) un=0; else if(un>1) un=1;
+              if(vn<0) vn=0; else if(vn>1) vn=1;
+
+              U2[i]=un; V2[i]=vn;
+            }
+          }
+          let tU=U; U=U2; U2=tU;
+          let tV=V; V=V2; V2=tV;
+        }
+        rdDirty = true;
+      }
+
+      function startWarmup(seconds){
+  const N = SW*SH;
+  const cap =
+    (N > 220000) ? 600 :
+    (N > 150000) ? 900 :
+                   1200;   // was ~520
+
+  warmupRemaining = Math.min(((seconds*60)|0), cap);
+  warmupInProgress = warmupRemaining > 0;
+}
+
+      function warmupStepBudgeted(t){
+        if(!warmupInProgress) return;
+
+        const tStart = performance.now();
+        const budgetMs = 2.8; // keep ocean smooth
+        while(warmupRemaining > 0 && (performance.now() - tStart) < budgetMs){
+          stepRD(t);
+          warmupRemaining--;
+        }
+        if(warmupRemaining <= 0) warmupInProgress = false;
+      }
+
+      const rdCols = {
+        deep0:[0.01,0.10,0.16], deep1:[0.02,0.17,0.25],
+        mid0:[0.03,0.25,0.33],  mid1:[0.07,0.35,0.42],
+        foam:[0.92,0.98,1.00],  glint:[0.55,0.86,0.94]
+      };
+
+      function renderRD(){
+        let p=0;
+        for(let y=0;y<SH;y++){
+          const ym=y===0?0:y-1, yp=y===SH-1?SH-1:y+1;
+          const uy=(y/SH-0.5);
+          for(let x=0;x<SW;x++){
+            const xm=x===0?0:x-1, xp=x===SW-1?SW-1:x+1;
+            const i=y*SW+x;
+
+            const v=V[i], u=U[i];
+            const gx=(V[y*SW+xp]-V[y*SW+xm])*0.5;
+            const gy=(V[yp*SW+x]-V[ym*SW+x])*0.5;
+            const g2=gx*gx+gy*gy;
+
+            const depth=clamp01((1-u)*RD.contrast);
+
+            let r=lerp(rdCols.deep0[0],rdCols.deep1[0],depth);
+            let g=lerp(rdCols.deep0[1],rdCols.deep1[1],depth);
+            let b=lerp(rdCols.deep0[2],rdCols.deep1[2],depth);
+
+            const m=clamp01((depth-0.15)/0.90);
+            r=lerp(r, lerp(rdCols.mid0[0],rdCols.mid1[0],m), m);
+            g=lerp(g, lerp(rdCols.mid0[1],rdCols.mid1[1],m), m);
+            b=lerp(b, lerp(rdCols.mid0[2],rdCols.mid1[2],m), m);
+
+            const foam=smoothstep(0.15,0.65,v)*RD.foam;
+            const gl=smoothstep(0.0005,0.0065,g2)*0.28;
+
+            r=lerp(r,rdCols.glint[0],gl);
+            g=lerp(g,rdCols.glint[1],gl);
+            b=lerp(b,rdCols.glint[2],gl);
+
+            const ww=clamp01(foam);
+            r=lerp(r,rdCols.foam[0],ww);
+            g=lerp(g,rdCols.foam[1],ww);
+            b=lerp(b,rdCols.foam[2],ww);
+
+            const ux=(x/SW-0.5);
+            const vv=clamp01(1-(ux*ux+uy*uy)*0.95);
+            const vfac=0.86+0.14*vv;
+            r*=vfac; g*=vfac; b*=vfac;
+
+            rdPix[p++]=(r*255)|0;
+            rdPix[p++]=(g*255)|0;
+            rdPix[p++]=(b*255)|0;
+            rdPix[p++]=255;
+          }
+        }
+        rdCtx.putImageData(rdImg,0,0);
+        rdDirty = false;
+      }
+
+      // ---------- Canvas sizes ----------
+      function resize(){
+        W=innerWidth; H=innerHeight;
+        canvas.width=W; canvas.height=H;
+
+        const maxDim = Math.min(SIM_MAX, Math.max(220, Math.floor(Math.min(W,H) * 0.55)));
+        if(W >= H){ SH = maxDim; SW = Math.floor(maxDim * (W/H)); }
+        else      { SW = maxDim; SH = Math.floor(maxDim * (H/W)); }
+
+        SW = Math.max(240, Math.min(SIM_MAX*2, SW));
+        SH = Math.max(240, Math.min(SIM_MAX*2, SH));
+
+        oceanSim.width=SW; oceanSim.height=SH;
+        oceanImg = oceanCtx.createImageData(SW,SH);
+        oceanPix = oceanImg.data;
+        oceanHeights = new Float32Array(SW*SH);
+
+        rdSim.width=SW; rdSim.height=SH;
+        rdImg = rdCtx.createImageData(SW,SH);
+        rdPix = rdImg.data;
+
+        const N=SW*SH;
+        U=new Float32Array(N); V=new Float32Array(N);
+        U2=new Float32Array(N); V2=new Float32Array(N);
+
+        initRDSpacedDots();
+        startWarmup(45.0); // warm up while ocean is already showing (no startup hitch)
+      }
+      addEventListener('resize', resize);
+
+      // ---------- Mode + crossfade ----------
+      let mode="ocean", target="ocean";
+      let fading=false, fadeStart=0;
+      const fadeDur=0.75;
+
+      function beginFade(next){
+        target=next;
+        if(target===mode) return;
+        fading=true;
+        fadeStart=performance.now();
+      }
+
+      function draw(alphaRD){
+        ctx.setTransform(1,0,0,1,0,0);
+        ctx.imageSmoothingEnabled=true;
+
+        if(alphaRD<=0){
+          ctx.globalAlpha=1;
+          ctx.drawImage(oceanSim,0,0,W,H);
+          return;
+        }
+        if(alphaRD>=1){
+          ctx.globalAlpha=1;
+          ctx.drawImage(rdSim,0,0,W,H);
+          return;
+        }
+
+        ctx.globalAlpha=1;
+        ctx.drawImage(oceanSim,0,0,W,H);
+        ctx.globalAlpha=alphaRD;
+        ctx.drawImage(rdSim,0,0,W,H);
+        ctx.globalAlpha=1;
+      }
+
+      let t0=performance.now();
+      let T=20.0; // ocean starts “~20s in” (free; no precompute)
+
+      function tick(now){
+        const dt=Math.min(0.033,(now-t0)/1000);
+        t0=now; T+=dt;
+
+        // Warm up RD in the background while on the ocean page (budgeted, non-blocking).
+        if(mode==="ocean" && warmupInProgress){
+          warmupStepBudgeted(T);
+        }
+
+        if(!fading){
+          if(mode==="ocean"){
+            renderOcean(T);
+            draw(0);
+          }else{
+            stepRD(T);
+            renderRD();
+            draw(1);
+          }
+        }else{
+          renderOcean(T);
+          stepRD(T);
+          renderRD();
+
+          const u=clamp01((now-fadeStart)/(fadeDur*1000));
+          const a=u*u*(3-2*u);
+          const alphaRD = (target==="rd") ? a : (1-a);
+          draw(alphaRD);
+
+          if(u>=1){ mode=target; fading=false; }
+        }
+
+        requestAnimationFrame(tick);
+      }
+
+      // ---------- UI ----------
+      const pills=[...document.querySelectorAll('.pill')];
+      const panel=document.getElementById('contentPanel');
+      const sections=[...document.querySelectorAll('.section')];
+
+      function applyPreset(tab){
+        const p=PRESETS[tab];
+        if(!p) return;
+        RD.F=p.F; RD.k=p.k; RD.Du=p.Du; RD.Dv=p.Dv; RD.dt=p.dt; RD.adv=p.adv; RD.foam=p.foam; RD.contrast=p.contrast;
+      }
+
+      function openTab(tab){
+        panel.dataset.open="true";
+        pills.forEach(p=>p.setAttribute('aria-selected', String(p.dataset.tab===tab)));
+        sections.forEach(s=>s.dataset.active = String(s.dataset.section===tab));
+        applyPreset(tab);
+
+        // Ensure RD has an up-to-date image ready to fade in.
+        if(rdDirty) renderRD();
+
+        beginFade("rd");
+      }
+
+      function closePanel(){
+        panel.dataset.open="false";
+        pills.forEach(p=>p.setAttribute('aria-selected',"false"));
+        sections.forEach(s=>s.dataset.active="false");
+        beginFade("ocean");
+      }
+
+      pills.forEach(p=>{
+        p.addEventListener('click', ()=>{
+          const tab=p.dataset.tab;
+          const same=(p.getAttribute('aria-selected')==="true");
+          if(panel.dataset.open==="true" && same) closePanel();
+          else openTab(tab);
+        });
+      });
+
+      addEventListener('keydown', e => { if(e.key==="Escape") closePanel(); });
+
+      // Init: draw a first ocean frame immediately, then animate.
+      resize();
+      closePanel();
+      mode="ocean"; target="ocean"; fading=false;
+      renderOcean(T);
+      draw(0);
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
