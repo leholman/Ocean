@@ -283,8 +283,14 @@
           if(!res.ok) throw new Error('not found');
           return res.text();
         }).then(function(md){
-          const inner = document.querySelector('.panel[data-panel="' + tab + '"] .panel-inner');
-          if(inner) inner.innerHTML = mdToHtml(md);
+          const panel = document.querySelector('.panel[data-panel="' + tab + '"]');
+          const inner = panel && panel.querySelector('.panel-inner');
+          if(inner){
+            inner.innerHTML = mdToHtml(md);
+            // If this panel is already open, the new content changed its height,
+            // so trigger a re-fit (the resize handler re-caps open panels).
+            if(panel.dataset.open === 'true') window.dispatchEvent(new Event('resize'));
+          }
         }).catch(function(){ /* keep the fallback content already in the HTML */ });
       });
     })();
@@ -1141,7 +1147,8 @@
         const inner = panel.querySelector('.panel-inner');
         const savedTrans = panel.style.transition;
 
-        // Measure the natural, uncapped content height.
+        // Measure the natural, uncapped content height + the panel's top on screen.
+        inner.style.height = 'auto';
         inner.style.maxHeight = 'none';
         inner.style.overflowY = 'visible';
         panel.style.transition = 'none';
@@ -1153,20 +1160,23 @@
         void panel.offsetHeight;
 
         // Space between the panel's top and the bottom of the window.
-        const avail = window.innerHeight - top - BOTTOM_GAP;
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const avail = Math.max(96, vh - top - BOTTOM_GAP);
 
         let targetH;
-        if(natural > avail){
-          // Too tall for the page: cap it and let the inner content scroll.
-          targetH = Math.max(avail, 96);
-          inner.style.maxHeight = targetH + 'px';
+        if(natural > avail + 1){
+          // Taller than the page: cap the panel and scroll its inner content.
+          targetH = avail;
+          inner.style.height = avail + 'px';      // definite height -> reliable scroll
           inner.style.overflowY = 'auto';
+          inner.style.overscrollBehavior = 'contain';
           inner.style.webkitOverflowScrolling = 'touch';
         } else {
           // Fits on the page: no scrolling, unchanged behaviour.
           targetH = natural;
-          inner.style.maxHeight = 'none';
+          inner.style.height = 'auto';
           inner.style.overflowY = 'visible';
+          inner.style.overscrollBehavior = '';
         }
 
         if(animate){
