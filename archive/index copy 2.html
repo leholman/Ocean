@@ -162,7 +162,7 @@
     </div>
 
     <div class="row" data-row="art">
-      <button class="word link" type="button" data-tab="art" aria-selected="false">ArtScience</button>
+      <button class="word link" type="button" data-tab="art" aria-selected="false">Art</button>
       <div class="panel" data-panel="art" data-open="false">
         <div class="panel-inner">
           <p>Filler text: a space for visual work — drawings, photography, generative pieces, or projects that sit at the boundary between science and image-making.</p>
@@ -192,103 +192,6 @@
       </div>
     </div>
   </div>
-
-  <!-- ============================================================
-       EDITABLE CONTENT LOADER
-       Each panel below pulls its body from a Markdown file in this
-       same folder. Edit those files to change the site content:
-         research.md  publications.md  artscience.md  links.md  contact.md
-       The section headings themselves stay in this HTML file.
-       (If a file is missing or you open index.html locally via file://,
-        the fallback text already in the HTML is shown instead.)
-       ============================================================ -->
-  <script>
-    (function(){
-      const CONTENT_FILES = {
-        research:     'research.md',
-        publications: 'publications.md',
-        art:          'artscience.md',
-        links:        'links.md',
-        contact:      'contact.md'
-      };
-
-      function escapeHtml(s){
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      }
-
-      function inline(text){
-        let s = escapeHtml(text);
-        // [label](url)  -> external urls open in a new tab
-        s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function(m, t, url){
-          const ext = /^https?:\/\//i.test(url);
-          return '<a href="' + url + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + t + '</a>';
-        });
-        s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');       // **bold**
-        s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');         // *italic*
-        s = s.replace(/_([^_]+)_/g, '<em>$1</em>');                     // _italic_
-        return s;
-      }
-
-      function isStandaloneLink(line){
-        return /^\s*\[[^\]]+\]\([^)\s]+\)\s*$/.test(line);
-      }
-
-      // Minimal Markdown -> HTML (headings, paragraphs, lists, links).
-      function mdToHtml(md){
-        const lines = md.replace(/\r\n?/g, '\n').split('\n');
-        const blocks = [];
-        let i = 0;
-        while(i < lines.length){
-          const line = lines[i];
-          if(/^\s*$/.test(line)){ i++; continue; }
-
-          const h = line.match(/^(#{1,6})\s+(.*)$/);       // ### Subheading
-          if(h){ blocks.push('<h3>' + inline(h[2].trim()) + '</h3>'); i++; continue; }
-
-          if(/^\s*[-*]\s+/.test(line)){                    // - bullet list
-            const items = [];
-            while(i < lines.length && /^\s*[-*]\s+/.test(lines[i])){
-              items.push('<li>' + inline(lines[i].replace(/^\s*[-*]\s+/, '')) + '</li>');
-              i++;
-            }
-            blocks.push('<ul>' + items.join('') + '</ul>');
-            continue;
-          }
-
-          if(isStandaloneLink(line)){                      // consecutive links -> linklist
-            const linkItems = [];
-            while(i < lines.length && isStandaloneLink(lines[i])){
-              linkItems.push(inline(lines[i].trim()));
-              i++;
-            }
-            blocks.push('<div class="linklist">' + linkItems.join('') + '</div>');
-            continue;
-          }
-
-          const para = [];                                 // paragraph
-          while(i < lines.length && !/^\s*$/.test(lines[i])
-                && !/^(#{1,6})\s+/.test(lines[i])
-                && !/^\s*[-*]\s+/.test(lines[i])
-                && !isStandaloneLink(lines[i])){
-            para.push(lines[i].trim());
-            i++;
-          }
-          blocks.push('<p>' + inline(para.join(' ')) + '</p>');
-        }
-        return blocks.join('\n');
-      }
-
-      Object.keys(CONTENT_FILES).forEach(function(tab){
-        fetch(CONTENT_FILES[tab], {cache:'no-cache'}).then(function(res){
-          if(!res.ok) throw new Error('not found');
-          return res.text();
-        }).then(function(md){
-          const inner = document.querySelector('.panel[data-panel="' + tab + '"] .panel-inner');
-          if(inner) inner.innerHTML = mdToHtml(md);
-        }).catch(function(){ /* keep the fallback content already in the HTML */ });
-      });
-    })();
-  </script>
 
   <script>
     (function(){
