@@ -1129,58 +1129,6 @@
         return h;
       }
 
-      // Breathing room kept between the bottom of an open panel and the
-      // bottom edge of the window.
-      const BOTTOM_GAP = 28;
-
-      // Size a panel to its content, but never past the bottom of the window.
-      // If the content is taller than the available space, the panel is capped
-      // and its inner content scrolls; otherwise it behaves exactly as before
-      // (full height, no scrollbar).
-      function fitPanel(panel, animate){
-        const inner = panel.querySelector('.panel-inner');
-        const savedTrans = panel.style.transition;
-
-        // Measure the natural, uncapped content height.
-        inner.style.maxHeight = 'none';
-        inner.style.overflowY = 'visible';
-        panel.style.transition = 'none';
-        const prevHeight = panel.style.height;
-        panel.style.height = 'auto';
-        const natural = panel.offsetHeight;
-        const top = panel.getBoundingClientRect().top;
-        panel.style.height = prevHeight;
-        void panel.offsetHeight;
-
-        // Space between the panel's top and the bottom of the window.
-        const avail = window.innerHeight - top - BOTTOM_GAP;
-
-        let targetH;
-        if(natural > avail){
-          // Too tall for the page: cap it and let the inner content scroll.
-          targetH = Math.max(avail, 96);
-          inner.style.maxHeight = targetH + 'px';
-          inner.style.overflowY = 'auto';
-          inner.style.webkitOverflowScrolling = 'touch';
-        } else {
-          // Fits on the page: no scrolling, unchanged behaviour.
-          targetH = natural;
-          inner.style.maxHeight = 'none';
-          inner.style.overflowY = 'visible';
-        }
-
-        if(animate){
-          panel.style.transition = savedTrans;   // keep CSS transition -> animate
-          panel.style.height = targetH + 'px';
-        } else {
-          panel.style.transition = 'none';
-          panel.style.height = targetH + 'px';
-          void panel.offsetHeight;
-          panel.style.transition = savedTrans;
-        }
-        return targetH;
-      }
-
       function expandPanel(panel){
         // Stage 1: instantly become a 2px line (no transition)
         panel.style.transition = 'none';
@@ -1189,19 +1137,10 @@
         // Force the line to commit to the DOM before we start the animation
         void panel.offsetHeight;
 
-        // Stage 2: animate down to the fitted height (capped to the window if
-        // the content runs past the bottom of the page).
+        // Stage 2: animate down to full content height
+        const target = measurePanel(panel);
         panel.style.transition = '';   // restore CSS transition
-        fitPanel(panel, true);
-
-        // Once the open animation settles (and any other panel has finished
-        // collapsing), re-fit against the final layout without animating.
-        const settle = (e) => {
-          if(e.propertyName !== 'height') return;
-          panel.removeEventListener('transitionend', settle);
-          if(panel.dataset.open === 'true') fitPanel(panel, false);
-        };
-        panel.addEventListener('transitionend', settle);
+        panel.style.height = target + 'px';
       }
 
       function collapsePanel(panel){
@@ -1256,10 +1195,17 @@
 
       addEventListener('keydown', e => { if(e.key === "Escape") closeSection(); });
 
-      // On window resize, re-fit any open panel (re-applies viewport capping).
+      // On window resize, re-measure any open panel
       addEventListener('resize', () => {
         panels.forEach(panel => {
-          if(panel.dataset.open === 'true') fitPanel(panel, false);
+          if(panel.dataset.open === 'true'){
+            panel.style.transition = 'none';
+            panel.style.height = 'auto';
+            const h = panel.offsetHeight;
+            panel.style.height = h + 'px';
+            void panel.offsetHeight;
+            panel.style.transition = '';
+          }
         });
       });
 
