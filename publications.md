@@ -1,5 +1,9 @@
 A chronological selection of my research — each title links through to the paper. The full list lives on [Google Scholar](https://scholar.google.com/citations?user=Y-EsZZwAAAAJ).
 
+**[Metabarcoding replicate detection frequency tracks ddPCR copy number for cod and herring eDNA in ancient marine sediments](https://doi.org/10.64898/2026.07.03.736335)** — *Methods in Ecology and Evolution*, 2026. Led by Elena Baños, a PhD candidate I co-supervise: shows that how often a species is detected across metabarcoding replicates tracks absolute eDNA concentrations measured by ddPCR, opening a route to quantitative reconstructions of fish populations from ancient seabed sediments.
+
+**[Fine-scale oceanographic processes shape marine biodiversity patterns inferred from environmental DNA in the Galápagos Islands](https://doi.org/10.1111/ddi.70239)** — *Diversity and Distributions*, 2026. Combines eDNA metabarcoding with physical oceanography across the Galápagos archipelago to show that fine-scale ocean processes structure marine biodiversity, even across short distances in one of the world's most iconic marine reserves.
+
 **[Shifting seas: understanding deep-time human impacts on marine ecosystems](https://doi.org/10.1098/rstb.2024.0026)** — *Philosophical Transactions of the Royal Society B*, 2025. I led the guest-editor team for this 16-article theme issue of the Royal Society's flagship biology journal; the opening article synthesises how humans have shaped marine ecosystems over thousands of years.
 
 **[Ancient environmental DNA indicates limited human impact on marine biodiversity in pre-industrial Iceland](https://doi.org/10.1098/rstb.2024.0031)** — *Philosophical Transactions of the Royal Society B*, 2025. Uses ancient eDNA from marine sediment cores spanning over 3,000 years to show limited human impact on marine biodiversity around Iceland before the industrial era.
