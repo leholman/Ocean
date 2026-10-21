@@ -4,6 +4,20 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Luke E. Holman</title>
+  <meta name="description" content="Luke E. Holman – marine ecologist using environmental and ancient DNA to reconstruct past oceans, track human impacts on marine biodiversity, and work at the boundary of art and science." />
+  <link rel="canonical" href="https://leholman.github.io/Ocean/" />
+  <meta name="theme-color" content="#041018" />
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+
+  <!-- Link previews (Bluesky, LinkedIn, Slack, WhatsApp, email…) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://leholman.github.io/Ocean/" />
+  <meta property="og:title" content="Luke E. Holman" />
+  <meta property="og:description" content="Marine ecology, ancient and environmental DNA, and art–science." />
+  <meta property="og:image" content="https://leholman.github.io/Ocean/preview.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
   <style>
     :root{
       --bg0:#041018; --bg1:#071b24;
@@ -38,7 +52,7 @@
     .word{
       font-family: "Helvetica Neue", Helvetica, Arial, system-ui, -apple-system, sans-serif;
       font-weight:300;
-      font-size: clamp(64px, 12vw, 180px);
+      font-size: clamp(36px, 12vw, 180px);
       line-height: 0.82;
       letter-spacing: -0.02em;
       color: #ffffff;
@@ -64,9 +78,12 @@
       transition: color 0.2s ease;
     }
     .link{
- 	 font-size: clamp(60px, 10vw, 170px); }
+ 	 font-size: clamp(34px, 10vw, 170px); }
     .link:hover{ color:#9fd8ff; }
-    .link[aria-selected="true"]{ color:#9fd8ff; }
+    .link[aria-expanded="true"]{ color:#9fd8ff; }
+    .link:focus{ outline:none; }
+    .link:focus-visible{ outline:2px solid #9fd8ff; outline-offset:4px; }
+    .panel-inner a:focus-visible{ outline:2px solid #9fd8ff; outline-offset:2px; }
 
     /* The panel: full viewport width, expands downward from a hairline.
        Sits inside the row so it pushes following rows down. */
@@ -125,7 +142,22 @@
     }
     .linklist{ display:flex; flex-direction:column; gap:8px; }
     .linklist a{ font-size:16px; }
+
+    /* Respect the "reduce motion" system setting: no panel animation
+       (the background is also kept still, see the script below). */
+    @media (prefers-reduced-motion: reduce){
+      .panel, .panel-inner, .panel[data-open="true"] .panel-inner, .link{ transition:none !important; }
+    }
   </style>
+  <!-- Without JavaScript, show every section stacked and let the page scroll. -->
+  <noscript>
+    <style>
+      body{ overflow:auto; }
+      .stack{ position:static; padding:5vh 5vw; max-width:none; }
+      .panel{ height:auto !important; left:-5vw; }
+      .panel-inner{ opacity:1 !important; }
+    </style>
+  </noscript>
 </head>
 
 <body>
@@ -137,57 +169,74 @@
     </div>
 
     <div class="row" data-row="research">
-      <button class="word link" type="button" data-tab="research" aria-selected="false">Research</button>
-      <div class="panel" data-panel="research" data-open="false">
+      <button class="word link" type="button" data-tab="research" aria-expanded="false" aria-controls="panel-research">Research</button>
+      <div class="panel" id="panel-research" data-panel="research" data-open="false" role="region" aria-label="Research">
         <div class="panel-inner">
-          <h3>Environmental DNA for biodiversity monitoring</h3>
-          <p>Filler text: sampling and analysis pipelines that turn water samples into robust, interpretable biodiversity signals.</p>
-          <h3>Population structure and connectivity</h3>
-          <p>Filler text: integrating genetic markers with spatial models to infer dispersal and management-relevant connectivity.</p>
+          <p>I'm interested in biodiversity change across space and time. My work sits between data science and ecology - I apply DNA-based methods to make sense of the oceans. Ultimately my goal is healthier future seas, through reconstructing prehistoric baselines, developing advanced ecosystem-health tools, and a curiosity-driven research programme.</p>
+          <h3>Reconstructing ancient oceans using ancient eDNA</h3>
+          <p>What can we learn about the climate-culture-biodiversity nexus from ancient marine eDNA? When and where do humans have the largest impact? How can climate interact with these impacts? Is biodiversity a result or a driver of anthropogenic and climatic change?</p>
+          <ul><li><a href="https://doi.org/10.1098/rstb.2024.0031" target="_blank" rel="noopener">Holman et al. 2025 · Phil. Trans. R. Soc. B</a></li><li><a href="https://doi.org/10.1098/rstb.2024.0026" target="_blank" rel="noopener">Holman et al. 2025 · Phil. Trans. R. Soc. B</a></li><li><a href="https://doi.org/10.1111/1755-0998.14086" target="_blank" rel="noopener">Holman et al. 2025 · Mol. Ecol. Resour.</a></li><li><a href="https://doi.org/10.1016/j.cub.2024.08.047" target="_blank" rel="noopener">Zampirolo et al. 2024 · Current Biology</a></li></ul>
+          <h3>Understanding the influence of human impacts on marine ecosystems</h3>
+          <p>How have invasive species, fishing, pollution, habitat and climate change impacted modern communities? Can we detect and attribute change from the deep sea to the tropics to the poles?</p>
+          <ul><li><a href="https://doi.org/10.1098/rstb.2021.0025" target="_blank" rel="noopener">Holman et al. 2022 · Phil. Trans. R. Soc. B</a></li><li><a href="https://doi.org/10.1016/j.marpolbul.2022.114062" target="_blank" rel="noopener">Good et al. 2022 · Mar. Pollut. Bull.</a></li><li><a href="https://doi.org/10.1016/j.marpolbul.2021.112893" target="_blank" rel="noopener">Fernandez et al. 2021 · Mar. Pollut. Bull.</a></li><li><a href="https://doi.org/10.1038/s41598-019-47899-7" target="_blank" rel="noopener">Holman et al. 2019 · Sci. Rep.</a></li></ul>
+          <h3>Marine biogeography &amp; community ecology</h3>
+          <p>What forces create bio-regionalisation in the oceans? Does it even make sense to slice up the sea according to biology? What new perspectives can an eDNA tree-of-life approach provide to intractable questions in marine ecology?</p>
+          <ul><li><a href="https://doi.org/10.1111/ddi.70239" target="_blank" rel="noopener">Holman et al. 2026 · Divers. Distrib.</a></li><li><a href="https://doi.org/10.1038/s41559-021-01439-7" target="_blank" rel="noopener">Holman et al. 2021 · Nat. Ecol. Evol.</a></li><li><a href="https://doi.org/10.1002/ecs2.2636" target="_blank" rel="noopener">Holman et al. 2019 · Ecosphere</a></li></ul>
+          <h3>Advancing modern and ancient DNA techniques</h3>
+          <p>Can we develop new methods in molecular biology and bioinformatics to help us make sense of eDNA data? How do these methods compare to our previous best for bio-monitoring?</p>
+          <ul><li><a href="https://doi.org/10.64898/2026.07.03.736335" target="_blank" rel="noopener">Baños et al. 2026 · Methods Ecol. Evol.</a></li><li><a href="https://doi.org/10.1111/1755-0998.14086" target="_blank" rel="noopener">Holman et al. 2025 · Mol. Ecol. Resour.</a></li><li><a href="https://doi.org/10.1111/2041-210X.14006" target="_blank" rel="noopener">Wang et al. 2022 · Methods Ecol. Evol.</a></li><li><a href="https://doi.org/10.1002/edn3.201" target="_blank" rel="noopener">Holman et al. 2022 · Environ. DNA</a></li></ul>
         </div>
       </div>
     </div>
 
     <div class="row" data-row="publications">
-      <button class="word link" type="button" data-tab="publications" aria-selected="false">Publications</button>
-      <div class="panel" data-panel="publications" data-open="false">
+      <button class="word link" type="button" data-tab="publications" aria-expanded="false" aria-controls="panel-publications">Publications</button>
+      <div class="panel" id="panel-publications" data-panel="publications" data-open="false" role="region" aria-label="Publications">
         <div class="panel-inner">
-          <p>Filler text: selected peer-reviewed publications. Replace with your list, ordered by year.</p>
-          <ul>
-            <li>Author A, Holman LE, Author C. <em>Title of paper.</em> Journal, Year.</li>
-            <li>Holman LE, Author B. <em>Another title.</em> Journal, Year.</li>
-          </ul>
+          <p>A selection of my research, newest first — each title links through to the paper. The full list lives on <a href="https://scholar.google.com/citations?user=Y-EsZZwAAAAJ" target="_blank" rel="noopener">Google Scholar</a>.</p>
+          <p><strong><a href="https://doi.org/10.64898/2026.07.03.736335" target="_blank" rel="noopener">Metabarcoding replicate detection frequency tracks ddPCR copy number for cod and herring eDNA in ancient marine sediments</a></strong> — <em>Methods in Ecology and Evolution</em>, 2026. Led by Elena Baños, a PhD candidate I co-supervise: shows that how often a species is detected across metabarcoding replicates tracks absolute eDNA concentrations measured by ddPCR, opening a route to quantitative reconstructions of fish populations from ancient seabed sediments.</p>
+          <p><strong><a href="https://doi.org/10.1111/ddi.70239" target="_blank" rel="noopener">Fine-scale oceanographic processes shape marine biodiversity patterns inferred from environmental DNA in the Galápagos Islands</a></strong> — <em>Diversity and Distributions</em>, 2026. Combines eDNA metabarcoding with physical oceanography across the Galápagos archipelago to show that fine-scale ocean processes structure marine biodiversity, even across short distances in one of the world's most iconic marine reserves.</p>
+          <p><strong><a href="https://doi.org/10.1098/rstb.2024.0026" target="_blank" rel="noopener">Shifting seas: understanding deep-time human impacts on marine ecosystems</a></strong> — <em>Philosophical Transactions of the Royal Society B</em>, 2025. I led the guest-editor team for this 16-article theme issue of the Royal Society's flagship biology journal; the opening article synthesises how humans have shaped marine ecosystems over thousands of years.</p>
+          <p><strong><a href="https://doi.org/10.1098/rstb.2024.0031" target="_blank" rel="noopener">Ancient environmental DNA indicates limited human impact on marine biodiversity in pre-industrial Iceland</a></strong> — <em>Philosophical Transactions of the Royal Society B</em>, 2025. Uses ancient eDNA from marine sediment cores spanning over 3,000 years to show limited human impact on marine biodiversity around Iceland before the industrial era.</p>
+          <p><strong><a href="https://doi.org/10.1111/1755-0998.14086" target="_blank" rel="noopener">Navigating past oceans: comparing metabarcoding and metagenomics of marine ancient sediment environmental DNA</a></strong> — <em>Molecular Ecology Resources</em>, 2025. Benchmarks the two leading approaches for recovering ancient DNA from seabed sediments to reconstruct past ocean life.</p>
+          <p><strong><a href="https://doi.org/10.1016/j.cub.2024.08.047" target="_blank" rel="noopener">Early pastoralism in Central European forests: insights from ancient environmental genomics</a></strong> — <em>Current Biology</em>, 2024. Led by Giulia Zampirolo: uses ancient DNA preserved in sediments to track the early spread of herding across Central Europe.</p>
+          <p><strong><a href="https://doi.org/10.1111/2041-210X.14006" target="_blank" rel="noopener">ngsLCA: a toolkit for fast and flexible lowest common ancestor inference and taxonomic profiling of metagenomic data</a></strong> — <em>Methods in Ecology and Evolution</em>, 2022. A widely-used bioinformatics tool, led by Yucheng Wang, for assigning taxonomy to metagenomic and ancient-DNA datasets.</p>
+          <p><strong><a href="https://doi.org/10.1098/rstb.2021.0025" target="_blank" rel="noopener">Managing human-mediated range shifts: understanding spatial, temporal and genetic variation in marine non-native species</a></strong> — <em>Philosophical Transactions of the Royal Society B</em>, 2022. Shows how eDNA can be used for temporal, spatial, and haplotype analyses of non-native marine species spread, and what that means for management.</p>
+          <p><strong><a href="https://doi.org/10.1002/edn3.201" target="_blank" rel="noopener">How does eDNA decay affect metabarcoding experiments?</a></strong> — <em>Environmental DNA</em>, 2022. Shows how the breakdown of DNA in the environment shapes metabarcoding results, with direct consequences for how surveys are designed and interpreted.</p>
+          <p><strong><a href="https://doi.org/10.1038/s41559-021-01439-7" target="_blank" rel="noopener">Animals, protists and bacteria share marine biogeographic patterns</a></strong> — <em>Nature Ecology &amp; Evolution</em>, 2021. In a flagship Nature-family journal: uses eDNA across the tree of life to reveal that animals, protists and bacteria follow strikingly similar large-scale patterns across the ocean.</p>
+          <p><strong><a href="https://doi.org/10.1038/s41598-019-47899-7" target="_blank" rel="noopener">Detection of introduced and resident marine species using environmental DNA metabarcoding of sediment and water</a></strong> — <em>Scientific Reports</em>, 2019. A foundational study showing that eDNA from sediment and water can detect both established and newly arrived marine species — a practical basis for biodiversity surveillance.</p>
+          <p><strong><a href="https://doi.org/10.3897/mbmg.2.28963" target="_blank" rel="noopener">Optimising the detection of marine taxonomic richness using environmental DNA metabarcoding: the effects of filter material, pore size and extraction method</a></strong> — <em>Metabarcoding and Metagenomics</em>, 2018. Led by Kristy Deiner: an influential early methods study on how filter material, pore size and extraction method shape what eDNA surveys can detect.</p>
+          <div class="linklist"><a href="https://scholar.google.com/citations?user=Y-EsZZwAAAAJ" target="_blank" rel="noopener">See the full publication list on Google Scholar →</a></div>
         </div>
       </div>
     </div>
 
     <div class="row" data-row="art">
-      <button class="word link" type="button" data-tab="art" aria-selected="false">ArtScience</button>
-      <div class="panel" data-panel="art" data-open="false">
+      <button class="word link" type="button" data-tab="art" aria-expanded="false" aria-controls="panel-art">ArtScience</button>
+      <div class="panel" id="panel-art" data-panel="art" data-open="false" role="region" aria-label="ArtScience">
         <div class="panel-inner">
-          <p>Filler text: a space for visual work — drawings, photography, generative pieces, or projects that sit at the boundary between science and image-making.</p>
+          <p>How can science inspire and develop new artistic research and works? How can art help science be understood, or generate entirely new ways of thinking in science?</p>
+          <p>I'm fascinated by these questions and work to integrate artists and artistic perspectives into my science.</p>
+          <p>For example, in 2023 and 2024 Rhoda Ting and Mikkel Bojesen explored our eDNA data from the <a href="https://doi.org/10.1111/1755-0998.14086" target="_blank" rel="noopener">Skagerrak</a> to produce a series of speculative <a href="https://studiothinkinghand.com/works/we-are-all-hybrids.html" target="_blank" rel="noopener">sculptures</a> and <a href="https://studiothinkinghand.com/public-works/vaesner.html" target="_blank" rel="noopener">public works</a> that question the nature of species and ask how new life may emerge in the future.</p>
+          <p>More recently, I have been developing <a href="https://globe.ku.dk/about/spark-art-science-initiative/" target="_blank" rel="noopener">SPARK</a>, an art–science initiative at the Globe Institute run in collaboration with <a href="https://arthubcopenhagen.net/en/" target="_blank" rel="noopener">Art Hub Copenhagen</a>. It brings together artists and scientists to develop new artistic works that help communicate science, ask new questions, and develop new ways of understanding.</p>
         </div>
       </div>
     </div>
 
     <div class="row" data-row="links">
-      <button class="word link" type="button" data-tab="links" aria-selected="false">Links</button>
-      <div class="panel" data-panel="links" data-open="false">
+      <button class="word link" type="button" data-tab="links" aria-expanded="false" aria-controls="panel-links">Links</button>
+      <div class="panel" id="panel-links" data-panel="links" data-open="false" role="region" aria-label="Links">
         <div class="panel-inner">
-          <div class="linklist">
-            <a href="https://scholar.google.com/" target="_blank" rel="noopener">Google Scholar</a>
-            <a href="https://bsky.app/" target="_blank" rel="noopener">Bluesky</a>
-            <a href="https://www.linkedin.com/" target="_blank" rel="noopener">LinkedIn</a>
-          </div>
+          <div class="linklist"><a href="https://scholar.google.com/citations?user=Y-EsZZwAAAAJ&amp;hl=en" target="_blank" rel="noopener">Google Scholar</a><a href="https://www.linkedin.com/in/leholman/" target="_blank" rel="noopener">LinkedIn</a></div>
         </div>
       </div>
     </div>
 
     <div class="row" data-row="contact">
-      <button class="word link" type="button" data-tab="contact" aria-selected="false">Contact</button>
-      <div class="panel" data-panel="contact" data-open="false">
+      <button class="word link" type="button" data-tab="contact" aria-expanded="false" aria-controls="panel-contact">Contact</button>
+      <div class="panel" id="panel-contact" data-panel="contact" data-open="false" role="region" aria-label="Contact">
         <div class="panel-inner">
-          <p>Filler text: email and institutional affiliation go here.</p>
+          <p>Get me @ luke.holman (at) sund (dot) ku (dot) dk</p>
         </div>
       </div>
     </div>
@@ -201,6 +250,11 @@
        The section headings themselves stay in this HTML file.
        (If a file is missing or you open index.html locally via file://,
         the fallback text already in the HTML is shown instead.)
+
+       NOTE: the fallback text above is a copy of the .md files as of
+       21 Oct 2026. It is what search engines, link previews and other
+       tools that don't run JavaScript see, so when you change a .md
+       file, update the matching section above too.
        ============================================================ -->
   <script>
     (function(){
@@ -216,17 +270,27 @@
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       }
 
-      function inline(text){
-        let s = escapeHtml(text);
-        // [label](url)  -> external urls open in a new tab
-        s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function(m, t, url){
-          const ext = /^https?:\/\//i.test(url);
-          return '<a href="' + url + '"' + (ext ? ' target="_blank" rel="noopener"' : '') + '>' + t + '</a>';
-        });
+      function emphasis(s){
         s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');       // **bold**
         s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');         // *italic*
-        s = s.replace(/_([^_]+)_/g, '<em>$1</em>');                     // _italic_
+        s = s.replace(/(^|[^\w])_([^_]+)_(?!\w)/g, '$1<em>$2</em>');    // _italic_
         return s;
+      }
+
+      function inline(text){
+        let s = escapeHtml(text);
+        // [label](url)  -> external urls open in a new tab.
+        // Links are swapped out for placeholders first so that * or _ inside
+        // a URL can never be mistaken for bold/italic markers.
+        const anchors = [];
+        s = s.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function(m, t, url){
+          const ext = /^https?:\/\//i.test(url);
+          anchors.push('<a href="' + url.replace(/"/g, '&quot;') + '"' +
+            (ext ? ' target="_blank" rel="noopener"' : '') + '>' + emphasis(t) + '</a>');
+          return '\u0000' + (anchors.length - 1) + '\u0000';
+        });
+        s = emphasis(s);
+        return s.replace(/\u0000(\d+)\u0000/g, function(m, n){ return anchors[+n]; });
       }
 
       function isStandaloneLink(line){
@@ -283,8 +347,14 @@
           if(!res.ok) throw new Error('not found');
           return res.text();
         }).then(function(md){
-          const inner = document.querySelector('.panel[data-panel="' + tab + '"] .panel-inner');
-          if(inner) inner.innerHTML = mdToHtml(md);
+          const panel = document.querySelector('.panel[data-panel="' + tab + '"]');
+          const inner = panel && panel.querySelector('.panel-inner');
+          if(inner){
+            inner.innerHTML = mdToHtml(md);
+            // If this panel is already open, the new content changed its height,
+            // so trigger a re-fit (the resize handler re-caps open panels).
+            if(panel.dataset.open === 'true') window.dispatchEvent(new Event('resize'));
+          }
         }).catch(function(){ /* keep the fallback content already in the HTML */ });
       });
     })();
@@ -299,6 +369,9 @@
         links:        {F:0.0205, k:0.0525, Du:0.28, Dv:0.13, dt:1.27, adv:0.02, foam:2.0, contrast:0.6},
         contact:      {F:0.0205, k:0.0510, Du:0.17, Dv:0.13, dt:1.27, adv:0.02, foam:2.0, contrast:0.6},
       };
+
+      const REDUCED_MOTION = !!(window.matchMedia &&
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
       const canvas = document.getElementById('c');
       const ctx = canvas.getContext('2d', { alpha:false, desynchronized:true });
@@ -692,6 +765,13 @@
 
             const srcX = x - vx;
             const srcY = y - vy;
+            // Foam drifting in from beyond the edge is clean water. (Clamping
+            // here used to copy foam back into the edge column, leaving white
+            // smears stuck along the left side of the screen.)
+            if(srcX < 0 || srcY < 0 || srcX > SW-1 || srcY > SH-1){
+              foamNextBuf[idx] = 0;
+              continue;
+            }
             const sx0i = Math.floor(srcX);
             const sy0i = Math.floor(srcY);
             const sx0 = sx0i<0?0:(sx0i>SW-1?SW-1:sx0i);
@@ -1129,6 +1209,62 @@
         return h;
       }
 
+      // Breathing room kept between the bottom of an open panel and the
+      // bottom edge of the window.
+      const BOTTOM_GAP = 28;
+
+      // Size a panel to its content, but never past the bottom of the window.
+      // If the content is taller than the available space, the panel is capped
+      // and its inner content scrolls; otherwise it behaves exactly as before
+      // (full height, no scrollbar).
+      function fitPanel(panel, animate){
+        const inner = panel.querySelector('.panel-inner');
+        const savedTrans = panel.style.transition;
+
+        // Measure the natural, uncapped content height + the panel's top on screen.
+        inner.style.height = 'auto';
+        inner.style.maxHeight = 'none';
+        inner.style.overflowY = 'visible';
+        panel.style.transition = 'none';
+        const prevHeight = panel.style.height;
+        panel.style.height = 'auto';
+        const natural = panel.offsetHeight;
+        const top = panel.getBoundingClientRect().top;
+        panel.style.height = prevHeight;
+        void panel.offsetHeight;
+
+        // Space between the panel's top and the bottom of the window.
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const avail = Math.max(96, vh - top - BOTTOM_GAP);
+
+        let targetH;
+        if(natural > avail + 1){
+          // Taller than the page: cap the panel and scroll its inner content.
+          targetH = avail;
+          inner.style.height = avail + 'px';      // definite height -> reliable scroll
+          inner.style.overflowY = 'auto';
+          inner.style.overscrollBehavior = 'contain';
+          inner.style.webkitOverflowScrolling = 'touch';
+        } else {
+          // Fits on the page: no scrolling, unchanged behaviour.
+          targetH = natural;
+          inner.style.height = 'auto';
+          inner.style.overflowY = 'visible';
+          inner.style.overscrollBehavior = '';
+        }
+
+        if(animate){
+          panel.style.transition = savedTrans;   // keep CSS transition -> animate
+          panel.style.height = targetH + 'px';
+        } else {
+          panel.style.transition = 'none';
+          panel.style.height = targetH + 'px';
+          void panel.offsetHeight;
+          panel.style.transition = savedTrans;
+        }
+        return targetH;
+      }
+
       function expandPanel(panel){
         // Stage 1: instantly become a 2px line (no transition)
         panel.style.transition = 'none';
@@ -1137,10 +1273,19 @@
         // Force the line to commit to the DOM before we start the animation
         void panel.offsetHeight;
 
-        // Stage 2: animate down to full content height
-        const target = measurePanel(panel);
+        // Stage 2: animate down to the fitted height (capped to the window if
+        // the content runs past the bottom of the page).
         panel.style.transition = '';   // restore CSS transition
-        panel.style.height = target + 'px';
+        fitPanel(panel, true);
+
+        // Once the open animation settles (and any other panel has finished
+        // collapsing), re-fit against the final layout without animating.
+        const settle = (e) => {
+          if(e.propertyName !== 'height') return;
+          panel.removeEventListener('transitionend', settle);
+          if(panel.dataset.open === 'true') fitPanel(panel, false);
+        };
+        panel.addEventListener('transitionend', settle);
       }
 
       function collapsePanel(panel){
@@ -1167,10 +1312,11 @@
         if(target) expandPanel(target);
 
         links.forEach(l => {
-          l.setAttribute('aria-selected', String(l.dataset.tab === tab));
+          l.setAttribute('aria-expanded', String(l.dataset.tab === tab));
         });
 
         openTab = tab;
+        if(REDUCED_MOTION) return;   // keep the still ocean
         applyPreset(tab);
         if(rdDirty) renderRD();
         beginFade("rd");
@@ -1180,7 +1326,7 @@
         panels.forEach(panel => {
           if(panel.dataset.open === 'true') collapsePanel(panel);
         });
-        links.forEach(l => l.setAttribute('aria-selected', "false"));
+        links.forEach(l => l.setAttribute('aria-expanded', "false"));
         openTab = null;
         beginFade("ocean");
       }
@@ -1195,17 +1341,10 @@
 
       addEventListener('keydown', e => { if(e.key === "Escape") closeSection(); });
 
-      // On window resize, re-measure any open panel
+      // On window resize, re-fit any open panel (re-applies viewport capping).
       addEventListener('resize', () => {
         panels.forEach(panel => {
-          if(panel.dataset.open === 'true'){
-            panel.style.transition = 'none';
-            panel.style.height = 'auto';
-            const h = panel.offsetHeight;
-            panel.style.height = h + 'px';
-            void panel.offsetHeight;
-            panel.style.transition = '';
-          }
+          if(panel.dataset.open === 'true') fitPanel(panel, false);
         });
       });
 
@@ -1213,7 +1352,14 @@
       mode="ocean"; target="ocean"; fading=false;
       renderOcean(T);
       draw(0);
-      requestAnimationFrame(tick);
+
+      if(REDUCED_MOTION){
+        // "Reduce motion" is on: show a single still frame of the ocean
+        // (redrawn on resize) instead of running the animation.
+        addEventListener('resize', () => { renderOcean(T); draw(0); });
+      } else {
+        requestAnimationFrame(tick);
+      }
     })();
   </script>
 </body>
